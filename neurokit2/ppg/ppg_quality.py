@@ -2,6 +2,7 @@
 
 from .ppg_peaks import ppg_peaks
 from ..signal.signal_templatequality import signal_templatequality
+from ..signal.signal_ibiquality import signal_ibiquality
 
 
 def ppg_quality(ppg_cleaned, peaks=None, sampling_rate=1000, method="templatematch"):
@@ -23,6 +24,15 @@ def ppg_quality(ppg_cleaned, peaks=None, sampling_rate=1000, method="templatemat
       indicate increasing disimilarity. The original method used dynamic time-warping to align the pulse
       waves prior to calculating the level of dsimilarity, whereas this implementation does not currently
       include this step.
+    
+    * The ``"ho2025"` method (Ho et al., 2025) assesses PPG quality on a beat-by-beat basis by predicting
+      whether each interbeat-interval (IBI) is accurate. To do so, beats are detected using a primary beat detector,
+      and each IBI is predicted to be accurate only if a secondary beat detector detects beats
+      in the same positions (within a tolerance). In this implementation, all signal samples within an
+      IBI are rated as high quality (1) if that IBI is predicted to be accurate, or low
+      quality (0) if that IBI is predicted to be inaccurate. Ho et al. proposed this approach for the ECG, and here 
+      it has been applied to the PPG. The general approach was derived by Ho et al from the previously proposed bSQI
+      approach.
 
     Parameters
     ----------
@@ -34,17 +44,19 @@ def ppg_quality(ppg_cleaned, peaks=None, sampling_rate=1000, method="templatemat
     sampling_rate : int
         The sampling frequency of the signal (in Hz, i.e., samples/second).
     method : str
-        The method for computing PPG signal quality, can be ``"templatematch"`` (default).
+        The method for computing PPG signal quality, can be ``"templatematch"`` (default), ``"disimilarity"``,
+        or ``"ho2025"``.
 
     Returns
     -------
     quality : array
         Vector containing the quality index ranging from 0 to 1 for ``"templatematch"`` method,
-        or an unbounded value (where 0 indicates high quality) for ``"disimilarity"`` method.
+        or an unbounded value (where 0 indicates high quality) for ``"disimilarity"`` method,
+        or zeros and ones (where 1 indicates high quality) for ``"ho2025"`` method.
 
     See Also
     --------
-    signal_templatequality
+    signal_templatequality, signal_ibiquality
 
     References
     ----------
@@ -52,6 +64,8 @@ def ppg_quality(ppg_cleaned, peaks=None, sampling_rate=1000, method="templatemat
       derivation and applications to wireless monitoring". IEEE Journal of Biomedical and Health Informatics, 19(3), 832-8.
     * Sabeti E. et al. (2019). Signal quality measure for pulsatile physiological signals using morphological features:
       Applications in reliability measure for pulse oximetry. Informatics in Medicine Unlocked, 16, 100222.
+    * Ho, S.Y.S et al. (2025). "Accurate RR-interval extraction from single-lead, telehealth electrocardiogram signals.
+      medRxiv, 2025.03.10.25323655. https://doi.org/10.1101/2025.03.10.25323655
 
     Examples
     --------
@@ -80,22 +94,34 @@ def ppg_quality(ppg_cleaned, peaks=None, sampling_rate=1000, method="templatemat
         peaks = peaks["PPG_Peaks"]
 
     # Sanitise method name
-    if method.lower() in ["templatematch", "orphanidou2015"]:
+    if method in ["templatematch", "orphanidou2015"]:
         method = "templatematch"
-    elif method.lower() in ["disimilarity", "sabeti2019"]:
+    elif method in ["disimilarity", "sabeti2019"]:
         method = "disimilarity"
+    elif method in ["ho2025", "ho"]:
+        method = "ho2025"
     else:
         raise ValueError(
-            f"Method '{method}' not recognised. Please use 'templatematch' or 'disimilarity'."
+            f"Method '{method}' not recognised. Please use 'templatematch', 'disimilarity', or 'ho2025'."
         )
 
-    # Run
-    quality = signal_templatequality(
-        ppg_cleaned,
-        beat_inds=peaks,
-        signal_type="ppg",
-        sampling_rate=sampling_rate,
-        method=method,
-    )
+    # Run 'templatematch' and 'disimilarity' methods
+    if method in ["templatematch", "disimilarity"]:
+        quality = signal_templatequality(
+            ppg_cleaned,
+            beat_inds=peaks,
+            signal_type="ppg",
+            sampling_rate=sampling_rate,
+            method=method,
+        )
+    elif method=="ho2025":
+        # Assess quality using Ho2025 method (IBI accuracy prediction)
+        quality = signal_ibiquality(
+            ppg_cleaned, 
+            signal_type="ppg",
+            primary_detector="charlton",
+            secondary_detector="elgendi",
+            sampling_rate=sampling_rate,
+        )
 
     return quality

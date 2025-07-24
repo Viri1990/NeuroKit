@@ -13,6 +13,7 @@ from .signal_findpeaks import signal_findpeaks
 from .signal_fixpeaks import signal_fixpeaks
 from .signal_flatline import signal_flatline
 from .signal_formatpeaks import signal_formatpeaks
+from .signal_ibiquality import signal_ibiquality
 from .signal_interpolate import signal_interpolate
 from .signal_merge import signal_merge
 from .signal_noise import signal_noise
@@ -68,4 +69,5 @@ __all__ = [
     "signal_sanitize",
     "signal_flatline",
     "signal_fillmissing",
+    "signal_ibiquality",
 ]

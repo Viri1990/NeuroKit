@@ -9,6 +9,7 @@ from ..misc import NeuroKitWarning
 from ..signal import signal_interpolate
 from ..signal.signal_power import signal_power
 from ..signal.signal_templatequality import signal_templatequality
+from ..signal.signal_ibiquality import signal_ibiquality
 from ..stats import distance, rescale
 from .ecg_peaks import ecg_peaks
 from .ecg_segment import ecg_segment
@@ -47,6 +48,14 @@ def ecg_quality(
       in this algorithm. The indices were originally weighted with a ratio of [0.4, 0.4, 0.1, 0.1]
       to generate the final classification outcome, but because qSQI was dropped, the weights have
       been rearranged to [0.6, 0.2, 0.2] for pSQI, kSQI and basSQI respectively.
+    
+    * The ``"ho2025"` method (Ho et al., 2025) assesses ECG quality on a beat-by-beat basis by predicting
+      whether each RR-interval is accurate. To do so, QRS complexes are detected using a primary QRS detector,
+      and each RR-interval is predicted to be accurate only if a secondary QRS detector detects QRS complexes
+      in the same positions (within a tolerance). In this implementation, all signal samples within an
+      RR-interval are rated as high quality (1) if that RR-interval is predicted to be accurate, or low
+      quality (0) if that RR-interval is predicted to be inaccurate. This approach was derived from the
+      previously proposed bSQI approach.
 
     Parameters
     ----------
@@ -58,7 +67,8 @@ def ecg_quality(
     sampling_rate : int
         The sampling frequency of the signal (in Hz, i.e., samples/second).
     method : str
-        The method for computing ECG signal quality, can be ``"averageQRS"`` (default) or ``"zhao2018"``.
+        The method for computing ECG signal quality, can be ``"averageQRS"`` (default), ``"zhao2018"``,
+        ``"templatematch"``, or ``"ho2025"``.
     approach : str
         The data fusion approach as documented in Zhao et al. (2018). Can be ``"simple"``
         or ``"fuzzy"``. The former performs simple heuristic fusion of SQIs and the latter performs
@@ -75,7 +85,7 @@ def ecg_quality(
 
     See Also
     --------
-    ecg_segment, ecg_delineate, signal_templatequality
+    ecg_segment, ecg_delineate, signal_templatequality, signal_ibi_quality
 
     References
     ----------
@@ -84,6 +94,8 @@ def ecg_quality(
       Physiology, 9, 727.
     * Orphanidou, C. et al. (2015). "Signal-quality indices for the electrocardiogram and photoplethysmogram:
       derivation and applications to wireless monitoring". IEEE Journal of Biomedical and Health Informatics, 19(3), 832-8.
+    * Ho, S.Y.S et al. (2025). "Accurate RR-interval extraction from single-lead, telehealth electrocardiogram signals.
+      medRxiv, 2025.03.10.25323655. https://doi.org/10.1101/2025.03.10.25323655
 
     Examples
     --------
@@ -146,6 +158,15 @@ def ecg_quality(
             signal_type="ecg",
             sampling_rate=sampling_rate,
             method="templatematch",
+        )
+    elif method in ["ho2025", "ho"]:
+        # Assess quality using Ho2025 method (RR-interval accuracy prediction)
+        quality = signal_ibiquality(
+            ecg_cleaned, 
+            signal_type="ecg",
+            primary_detector="unsw",
+            secondary_detector="neurokit",
+            sampling_rate=sampling_rate,
         )
 
     return quality
