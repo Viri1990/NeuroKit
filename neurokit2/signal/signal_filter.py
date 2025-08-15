@@ -166,6 +166,8 @@ def signal_filter(
             filtered = _signal_filter_bessel(signal_sanitized, sampling_rate, lowcut, highcut, order)
         elif method in ["fir"]:
             filtered = _signal_filter_fir(signal_sanitized, sampling_rate, lowcut, highcut, window_size=window_size)
+        elif method in ["iirnotch"]:
+            filtered = _signal_filter_iirnotch(signal_sanitized, sampling_rate)
         else:
             raise ValueError(
                 "NeuroKit error: signal_filter(): 'method' should be",
@@ -305,6 +307,20 @@ def _signal_filter_powerline(signal, sampling_rate, powerline=50):
         b = np.ones(2)
     a = [len(b)]
     y = scipy.signal.filtfilt(b, a, signal, method="pad")
+    return y
+
+
+# =============================================================================
+# IIR Notch
+# =============================================================================
+
+
+def _signal_filter_iirnotch(signal, sampling_rate, cutoff=0.05, Q=0.005):
+    """Apply infinite impulse response notch filter"""
+
+    b, a = scipy.signal.iirnotch(cutoff=cutoff, Q=Q, fs=sampling_rate)
+    y = scipy.signal.filtfilt(b, a, signal)
+
     return y
 
 

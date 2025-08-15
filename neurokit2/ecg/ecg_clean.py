@@ -410,6 +410,9 @@ def _ecg_clean_langevin(ecg_signal, sampling_rate):
     (2021) implemented according to Vorreuther et al. ( 2025).
 
     """
-    b, a = scipy.signal.iirnotch(cutoff=0.05, Q=0.005, fs=sampling_rate)
-    clean = scipy.signal.filtfilt(b, a, ecg_signal)
+    clean = signal_filter(
+        signal=ecg_signal,
+        sampling_rate=sampling_rate,
+        method="iirnotch",
+    )
     return clean
