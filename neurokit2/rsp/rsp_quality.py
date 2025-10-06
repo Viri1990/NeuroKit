@@ -44,7 +44,7 @@ def rsp_quality(rsp_cleaned, peaks=None, sampling_rate=1000, method="templatemat
 
     See Also
     --------
-    signal_templatequality
+    signal_quality, rsp_clean
 
     References
     ----------

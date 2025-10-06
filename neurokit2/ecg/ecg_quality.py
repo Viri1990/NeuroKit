@@ -92,7 +92,7 @@ def ecg_quality(
 
     See Also
     --------
-    ecg_segment, ecg_delineate, signal_templatequality, signal_ibi_quality
+    ecg_segment, ecg_delineate, signal_quality, ecg_clean
 
     References
     ----------
