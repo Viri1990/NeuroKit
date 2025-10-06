@@ -458,3 +458,42 @@ def test_signal_surrogate():
         np.mean(np.abs(np.abs(np.fft.rfft(surrogate - np.mean(surrogate)))
                        - np.abs(np.fft.rfft(x - np.mean(x))))) < 0.1
     )
+
+
+def test_signal_quality():
+
+    # smoke test for each signal type
+    duration = 30
+    sampling_rate = 100
+    for signal_type in ['ppg', 'ecg', 'rsp']:
+        # setup for this signal
+        if signal_type == 'ppg':
+            signal = nk.ppg_simulate(duration=duration, sampling_rate=sampling_rate)
+            _, peaks = nk.ppg_peaks(signal, sampling_rate=sampling_rate)
+            cycle_inds = peaks["PPG_Peaks"]
+        elif signal_type == 'ecg':
+            signal = nk.ecg_simulate(duration=duration, sampling_rate=sampling_rate)
+            _, rpeaks = nk.ecg_peaks(signal, sampling_rate=sampling_rate)
+            cycle_inds = rpeaks["ECG_R_Peaks"]
+        elif signal_type == 'rsp':
+            signal = nk.rsp_simulate(duration=duration, sampling_rate=sampling_rate)
+            signal = -1 * scipy.signal.detrend(signal)
+            _, peaks = nk.rsp_peaks(signal, sampling_rate=sampling_rate, method="bettermann1996")
+            cycle_inds = peaks["RSP_Peaks"]
+        
+        # assess quality for this signal using each method
+        for method in ['templatematch', 'disimilarity', 'ici']:
+            if method == 'ici' and signal_type == 'rsp':
+                # ASSERTION: Check that the specific ValueError is raised
+                with pytest.raises(ValueError, match=r"`method` 'ici' is only supported for 'ppg' and 'ecg' signal types."):
+                    # Call the function with the problematic inputs
+                    quality = nk.signal_quality(
+                        signal, sampling_rate=sampling_rate, cycle_inds=cycle_inds, signal_type=signal_type, method=method
+                        )
+                continue  # skip for ICI and RSP (as these aren't compatible)
+            quality = nk.signal_quality(
+                signal, sampling_rate=sampling_rate, cycle_inds=cycle_inds, signal_type=signal_type, method=method
+                )
+            # check output is of expected length (same length as input signal)
+            assert len(quality) == duration*sampling_rate
+    

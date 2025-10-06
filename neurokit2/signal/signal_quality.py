@@ -130,6 +130,12 @@ def signal_quality(
     
     """
 
+    # Check inputs
+    if signal_type == None:
+        raise ValueError("`signal_type` must be specified (e.g. 'ppg', 'ecg', or 'rsp').")
+    if method == "ici" and (signal_type != "ppg" and signal_type != "ecg"):
+        raise ValueError("`method` 'ici' is only supported for 'ppg' and 'ecg' signal types.")
+
     # Standardize inputs
     signal_type = signal_type.lower()  # remove capitalised letters
     method = method.lower()  # remove capitalised letters
@@ -297,10 +303,6 @@ def _quality_ici(
     primary_detector = primary_detector.lower()  # remove capitalised letters
     secondary_detector = secondary_detector.lower()  # remove capitalised letters
     signal = np.asarray(signal)
-
-    # check that signal_type is either "ecg" or "ppg"
-    if signal_type not in ["ecg", "ppg"]:
-        raise ValueError("`signal_type` must be 'ecg' or 'ppg'.")
 
     # Specify constants - tolerance_window_ms is tolerance window size, in milliseconds
     tolerance_samps = int((tolerance_window_ms / 1000) * sampling_rate)  
