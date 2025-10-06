@@ -94,7 +94,8 @@ def rsp_findpeaks(
         info = _rsp_findpeaks_bettermann(cleaned)
     else:
         raise ValueError(
-            "NeuroKit error: rsp_findpeaks(): 'method' should be one of 'khodadad2018', 'scipy', 'biosppy', or 'bettermann1996'."
+            "NeuroKit error: rsp_findpeaks(): 'method' should be one of 'khodadad2018', 'scipy', 'biosppy', or "
+            "'bettermann1996'."
         )
 
     return info

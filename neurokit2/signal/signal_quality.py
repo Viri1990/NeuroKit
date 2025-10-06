@@ -302,13 +302,17 @@ def _quality_ici(
     if signal_type not in ["ecg", "ppg"]:
         raise ValueError("`signal_type` must be 'ecg' or 'ppg'.")
 
-    # Specify constants
-    tolerance_samps = int((tolerance_window_ms / 1000) * sampling_rate)  # tolerance_window_ms is tolerance window size, in milliseconds
+    # Specify constants - tolerance_window_ms is tolerance window size, in milliseconds
+    tolerance_samps = int((tolerance_window_ms / 1000) * sampling_rate)  
 
     # Detect cycles using each cycle detector in turn
-    cycles_primary = _signal_cycles(signal, signal_type=signal_type, cycle_detector=primary_detector, sampling_rate=sampling_rate)
-    cycles_secondary = _signal_cycles(signal, signal_type=signal_type, cycle_detector=secondary_detector, sampling_rate=sampling_rate)
-    
+    cycles_primary = _signal_cycles(
+        signal, signal_type=signal_type, cycle_detector=primary_detector, sampling_rate=sampling_rate
+    )
+    cycles_secondary = _signal_cycles(
+        signal, signal_type=signal_type, cycle_detector=secondary_detector, sampling_rate=sampling_rate
+    )
+
     # Filter closely spaced cycles to keep only the highest amplitude cycle
     cycles_primary = _filter_close_cycles(cycles_primary, signal, tolerance_samps)
     cycles_secondary = _filter_close_cycles(cycles_secondary, signal, tolerance_samps)
