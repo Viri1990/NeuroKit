@@ -106,10 +106,10 @@ def ecg_clean(ecg_signal, sampling_rate=1000, method="neurokit", **kwargs):
     if n_missing > 0:
         warn(
             "There are " + str(n_missing) + " missing data points in your signal."
-            " Filling missing values by using the forward filling method.",
+            " Filling missing values using `signal_fillmissing`.",
             category=NeuroKitWarning,
         )
-        ecg_signal = _ecg_clean_missing(ecg_signal)
+        ecg_signal = signal_fillmissing(ecg_signal, method="both")
 
     method = method.lower()  # remove capitalised letters
     if method in ["nk", "nk2", "neurokit", "neurokit2"]:
@@ -157,15 +157,6 @@ def ecg_clean(ecg_signal, sampling_rate=1000, method="neurokit", **kwargs):
             " 'templateconvolution', 'vg'."
         )
     return clean
-
-
-# =============================================================================
-# Handle missing data
-# =============================================================================
-def _ecg_clean_missing(ecg_signal):
-    ecg_signal = pd.DataFrame.pad(pd.Series(ecg_signal))
-
-    return ecg_signal
 
 
 # =============================================================================
