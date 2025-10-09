@@ -14,9 +14,10 @@ def ppg_clean(ppg_signal, sampling_rate=1000, heart_rate=None, method="elgendi")
     such as systolic peak detection.
 
     * ``'elgendi'`` (default): Bandpass filter the signal between 0.5 and 8 Hz using a Butterworth filter.
-    * ``'nabian2018'`` (default): Lowpass filter the signal below 40 Hz. If `heart_rate` is provided then the function
+    * ``'nabian2018'``: Lowpass filter the signal below 40 Hz. If `heart_rate` is provided then the function
       checks whether 40 Hz is at least 10 times the cardiac frequency and less than half of the sampling frequency, and
       raises an error if not.
+    * ``'goda2024'``: Bandpass filter the signal between 0.5 and 12 Hz using a fourth-order Chebyshev Type II filter.
 
     Parameters
     ----------
@@ -28,8 +29,8 @@ def ppg_clean(ppg_signal, sampling_rate=1000, heart_rate=None, method="elgendi")
     sampling_rate : int
         The sampling frequency of ``ppg_signal`` (in Hz, i.e., samples/second). The default is 1000.
     method : str
-        The processing pipeline to apply. Can be one of ``"elgendi"`` (default), ``"nabian2018"``, or ``"none"``.
-        If ``"none"`` is passed, the raw signal will be returned without any cleaning.
+        The processing pipeline to apply. Can be one of ``"elgendi"`` (default), ``"nabian2018"``, ``"goda2024"``, 
+        or ``"none"``. If ``"none"`` is passed, the raw signal will be returned without any cleaning.
 
     Returns
     -------
@@ -52,7 +53,7 @@ def ppg_clean(ppg_signal, sampling_rate=1000, heart_rate=None, method="elgendi")
       ppg = nk.ppg_simulate(heart_rate=75, duration=30)
       ppg_elgendi = nk.ppg_clean(ppg, method='elgendi')
       ppg_nabian = nk.ppg_clean(ppg, method='nabian2018', heart_rate=75)
-
+      
       # Plot and compare methods
       signals = pd.DataFrame({'PPG_Raw' : ppg,
                               'PPG_Elgendi' : ppg_elgendi,
@@ -71,6 +72,9 @@ def ppg_clean(ppg_signal, sampling_rate=1000, heart_rate=None, method="elgendi")
     * M. Elgendi, I. Norton, M. Brearley, D. Abbott, and D. Schuurmans (2013).
       Systolic peak detection in acceleration photoplethysmograms measured from emergency responders
       in tropical conditions. PLoS ONE, 8(10), 1–11.
+    * M.A. Goda, P.H. Charlton, and J. Behar (2024).
+      pyPPG: a Python toolbox for comprehensive photoplethysmography signal analysis. Physiological Measurement,
+      45 (4), 045001. doi: https://doi.org/10.1088/1361-6579/ad33a2
 
     """
     ppg_signal = as_vector(ppg_signal)
@@ -90,11 +94,13 @@ def ppg_clean(ppg_signal, sampling_rate=1000, heart_rate=None, method="elgendi")
         clean = _ppg_clean_elgendi(ppg_signal, sampling_rate)
     elif method in ["nabian2018"]:
         clean = _ppg_clean_nabian2018(ppg_signal, sampling_rate, heart_rate=heart_rate)
+    elif method in ["goda", "goda2024"]:
+        clean = _ppg_clean_goda(ppg_signal, sampling_rate)
     elif method in ["none"]:
         clean = ppg_signal
     else:
         raise ValueError(
-            "`method` not found. Must be one of 'elgendi', 'nabian2018', or 'none'."
+            "`method` not found. Must be one of 'elgendi', 'nabian2018', 'goda2024', or 'none'."
         )
 
     return clean
@@ -143,4 +149,17 @@ def _ppg_clean_nabian2018(ppg_signal, sampling_rate, heart_rate=None):
         method="butterworth",
     )
 
+    return filtered
+
+
+def _ppg_clean_goda(ppg_signal, sampling_rate):
+    """Band-pass filter for continuous PPG signal preprocessing, adapted from Goda et al. (2024)."""
+    filtered = signal_filter(
+        ppg_signal,
+        sampling_rate=sampling_rate,
+        lowcut=0.5,
+        highcut=12,
+        order=4,
+        method="chebyshevII",
+    )
     return filtered
