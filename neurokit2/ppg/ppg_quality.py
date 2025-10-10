@@ -34,13 +34,13 @@ def ppg_quality(ppg_cleaned, peaks=None, sampling_rate=1000, method="templatemat
       it has been applied to the PPG. The general approach was derived by Ho et al from the previously proposed bSQI
       approach.
 
-    * The ``"skewness"`` method (based on Elgendi, 2016) computes the skewness of the PPG signal. The skewness is a 
-      measure of the asymmetry of the probability distribution of the signal's amplitude values. In Elgendi (2016),
-      higher quality signals were generally found to have higher skewness values.
+    * The ``"skewness"`` method (based on Selveraj, 2011 and Elgendi, 2016) computes the skewness of the PPG signal.
+      The skewness is a measure of the asymmetry of the probability distribution of the signal's amplitude values. 
+      In Elgendi (2016), higher quality signals were generally found to have higher skewness values.
 
-    * The ``"kurtosis"`` method (based on Elgendi, 2016) computes the kurtosis of the PPG signal. The kurtosis is a 
-      measure of the "tailedness" of the probability distribution of the signal's amplitude values. In Elgendi (2016),
-      higher quality signals were generally found to have higher kurtosis values.
+    * The ``"kurtosis"`` method (based on Selveraj, 2011 and Elgendi, 2016) computes the kurtosis of the PPG signal. 
+      The kurtosis is a measure of the "tailedness" of the probability distribution of the signal's amplitude values.
+      In Elgendi (2016), higher quality signals were generally found to have higher kurtosis values.
 
     Parameters
     ----------
@@ -83,6 +83,8 @@ def ppg_quality(ppg_cleaned, peaks=None, sampling_rate=1000, method="templatemat
       medRxiv, 2025.03.10.25323655. https://doi.org/10.1101/2025.03.10.25323655
     * Elgendi, M. et al. (2016). "Optimal signal quality index for photoplethysmogram signals".
       Bioengineering, 3(4), 1–15. doi: https://doi.org/10.3390/bioengineering3040021
+    * Selvaraj, N. et al. (2011). "Statistical approach for the detection of motion/noise artifacts in Photoplethysmogram". 
+      Proc IEEE EMBC; pp. 4972–4975.
 
     Examples
     --------
