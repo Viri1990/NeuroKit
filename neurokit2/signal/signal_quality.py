@@ -6,7 +6,7 @@ from ..signal import signal_interpolate, signal_cyclesegment
 
 
 def signal_quality(
-    signal, sampling_rate=1000, cycle_inds=None, signal_type=None, method="templatematch", primary_detector=None, 
+    signal, sampling_rate=1000, cycle_inds=None, signal_type=None, method="templatematch", primary_detector=None,
     secondary_detector=None, tolerance_window_ms=50
 ):
     """**Assess quality of signal by comparing individual cycle morphologies with a template**
@@ -21,11 +21,11 @@ def signal_quality(
       relative: 1 corresponds to a signal where each individual cycle's morphology is closest to the average cycle morphology
       (i.e. correlate exactly with it) and 0 corresponds to there being no correlation with the average cycle morphology.
 
-    * The ``"disimilarity"`` method (loosely based on Sabeti et al., 2019) computes a continuous index
-      of quality of the PPG or ECG signal, by calculating the level of disimilarity between each individual
+    * The ``"dissimilarity"`` method (loosely based on Sabeti et al., 2019) computes a continuous index
+      of quality of the PPG or ECG signal, by calculating the level of dissimilarity between each individual
       cycle's (i.e. beat's) morphology and an average (template) cycle morphology (after they are normalised). A value of
-      zero indicates no disimilarity (i.e. equivalent cycle morphologies), whereas values above or below
-      indicate increasing disimilarity. The original method used dynamic time-warping to align the pulse
+      zero indicates no dissimilarity (i.e. equivalent cycle morphologies), whereas values above or below
+      indicate increasing dissimilarity. The original method used dynamic time-warping to align the pulse
       waves prior to calculating the level of dsimilarity, whereas this implementation does not currently
       include this step.
 
@@ -45,12 +45,12 @@ def signal_quality(
     sampling_rate : int
         The sampling frequency of ``signal`` (in Hz, i.e., samples/second). Defaults to 1000.
     cycle_inds : tuple or list
-        The list of cycle samples (e.g. beat or breath samples, such as PPG or ECG peaks returned by ``ppg_peaks()`` 
+        The list of cycle samples (e.g. beat or breath samples, such as PPG or ECG peaks returned by ``ppg_peaks()``
         or ``ecg_peaks()``, or RSP peaks returned by ``rsp_peaks()``).
     signal_type : str
         The signal type (e.g. 'ppg', 'ecg', or 'rsp').
     method : str
-        The processing pipeline to apply. Can be one of ``"disimilarity"``, ``"templatematch"``. The default is
+        The processing pipeline to apply. Can be one of ``"dissimilarity"``, ``"templatematch"``. The default is
         ``"templatematch"``.
     primary_detector : str
         The name of the primary cycle (i.e. beat or breath) detector (e.g. the defaults are ``"unsw"`` for the ECG, and
@@ -68,7 +68,7 @@ def signal_quality(
     -------
     quality : array
         Vector containing the quality index ranging from 0 to 1 for ``"templatematch"`` method,
-        or an unbounded value (where 0 indicates high quality) for ``"disimilarity"`` method.
+        or an unbounded value (where 0 indicates high quality) for ``"dissimilarity"`` method.
 
     See Also
     --------
@@ -82,7 +82,7 @@ def signal_quality(
       Applications in reliability measure for pulse oximetry. Informatics in Medicine Unlocked, 16, 100222.
     * Ho, S.Y.S et al. (2025). "Accurate RR-interval extraction from single-lead, telehealth electrocardiogram signals.
       medRxiv, 2025.03.10.25323655. https://doi.org/10.1101/2025.03.10.25323655
-    
+
     Examples
     --------
     * **Example 1:** Using ICI method to assess PPG signal quality
@@ -90,7 +90,7 @@ def signal_quality(
     .. ipython:: python
 
       import neurokit2 as nk
-      
+
       sampling_rate = 100
       ppg = nk.ppg_simulate(
           duration=30, sampling_rate=sampling_rate, heart_rate=70, motion_amplitude=1, burst_number=10, random_state=12
@@ -98,13 +98,13 @@ def signal_quality(
       quality = nk.ppg_quality(ppg, sampling_rate=sampling_rate, method="ici")
       nk.signal_plot([ppg, quality], standardize=True)
       plt.close()
-    
+
     * **Example 2:** Using template-matching method to assess ECG signal quality
 
     .. ipython:: python
 
       import neurokit2 as nk
-      
+
       sampling_rate = 100
       duration = 20
       ecg = nk.ecg_simulate(
@@ -113,13 +113,13 @@ def signal_quality(
       quality = nk.ecg_quality(ecg, sampling_rate=sampling_rate, method="templatematch")
       nk.signal_plot([ecg, quality], standardize=True)
       plt.close()
-    
+
     * **Example 2:** Using template-matching method to assess RSP signal quality
 
     .. ipython:: python
 
       import neurokit2 as nk
-      
+
       sampling_rate = 50
       duration = 30
       rsp = nk.rsp_simulate(duration=30, sampling_rate=sampling_rate, method="breathmetrics")
@@ -127,7 +127,7 @@ def signal_quality(
       quality = nk.rsp_quality(rsp_cleaned, sampling_rate=sampling_rate, method="templatematch")
       nk.signal_plot([rsp_cleaned, quality], standardize=True)
       plt.close()
-    
+
     """
 
     # Check inputs
@@ -135,18 +135,20 @@ def signal_quality(
         raise ValueError("`signal_type` must be specified (e.g. 'ppg', 'ecg', or 'rsp').")
     if method == "ici" and (signal_type != "ppg" and signal_type != "ecg"):
         raise ValueError("`method` 'ici' is only supported for 'ppg' and 'ecg' signal types.")
+    if method != "ici" and (cycle_inds is None or len(cycle_inds) == 0):
+        raise ValueError("`templatematch` and `dissimilarity` require at least one detected peak.")
 
     # Standardize inputs
     signal_type = signal_type.lower()  # remove capitalised letters
     method = method.lower()  # remove capitalised letters
-    
+
     # Run selected quality assessment method
     if method in ["templatematch"]:  # Based on the approach in Orphanidou et al. (2015) and Charlton et al. (2021)
         quality = _quality_templatematch(
             signal, cycle_inds=cycle_inds, signal_type=signal_type, sampling_rate=sampling_rate,
         )
-    elif method in ["disimilarity"]:  # Based on the approach in Sabeti et al. (2019)
-        quality = _quality_disimilarity(
+    elif method in ["dissimilarity"]:  # Based on the approach in Sabeti et al. (2019)
+        quality = _quality_dissimilarity(
             signal, cycle_inds=cycle_inds, signal_type=signal_type, sampling_rate=sampling_rate
         )
     elif method in ["ici", "ho2025"]:  # Based on the approach in Ho et al. (2025)
@@ -154,6 +156,8 @@ def signal_quality(
             signal, signal_type=signal_type, primary_detector=primary_detector, secondary_detector=secondary_detector,
             sampling_rate=sampling_rate,tolerance_window_ms=tolerance_window_ms
         )
+    else:
+        raise ValueError(f'The `{method}` method does not exist in signal_quality. Please choose one of: `templatematch`, `dissimilarity` or `ici`')
 
     return quality
 
@@ -162,7 +166,7 @@ def signal_quality(
 # Calculate template morphology
 # =============================================================================
 def _calc_template_morph(signal, cycle_inds, signal_type, sampling_rate=1000):
-    
+
     # Segment to get individual cycle morphologies
     cycles, average_cycle_rate = signal_cyclesegment(signal, cycle_inds, sampling_rate=sampling_rate)
 
@@ -190,7 +194,7 @@ def _calc_template_morph(signal, cycle_inds, signal_type, sampling_rate=1000):
 def _quality_templatematch(
     signal, cycle_inds=None, signal_type="ppg", sampling_rate=1000
 ):
-    
+
     # Obtain individual cycle morphologies and template cycle morphology
     templ_morph, ind_morph, cycle_inds = _calc_template_morph(
         signal,
@@ -241,16 +245,16 @@ def _calc_dis(pw1, pw2):
     # ignore any elements which are zero because log(0) is -inf
     rel_els = (pw1 != 0) & (pw2 != 0)
 
-    # calculate disimilarity measure (using pw2 as the template)
+    # calculate dissimilarity measure (using pw2 as the template)
     dis = np.sum(pw2[rel_els] * np.log(pw2[rel_els] / pw1[rel_els]))
 
     return dis
 
 
 # =============================================================================
-# Quality assessment using disimilarity method
+# Quality assessment using dissimilarity method
 # =============================================================================
-def _quality_disimilarity(
+def _quality_dissimilarity(
     signal, cycle_inds=None, signal_type="ppg", sampling_rate=1000
 ):
 
@@ -262,7 +266,7 @@ def _quality_disimilarity(
         sampling_rate=sampling_rate,
     )
 
-    # Find individual disimilarity measures
+    # Find individual dissimilarity measures
     dis = np.zeros(len(cycle_inds) - 1)
     for cycle_no in range(0, len(cycle_inds) - 1):
         dis[cycle_no] = _calc_dis(ind_morph.iloc[cycle_no], templ_morph)
@@ -281,7 +285,7 @@ def _quality_disimilarity(
 def _quality_ici(
             signal, signal_type, primary_detector, secondary_detector, sampling_rate, tolerance_window_ms=50
         ):
-    
+
     # Specify default cycle (e.g. beat) detectors
     if primary_detector is None:
         if signal_type == "ecg":
@@ -305,7 +309,7 @@ def _quality_ici(
     signal = np.asarray(signal)
 
     # Specify constants - tolerance_window_ms is tolerance window size, in milliseconds
-    tolerance_samps = int((tolerance_window_ms / 1000) * sampling_rate)  
+    tolerance_samps = int((tolerance_window_ms / 1000) * sampling_rate)
 
     # Detect cycles using each cycle detector in turn
     cycles_primary = _signal_cycles(
@@ -318,7 +322,7 @@ def _quality_ici(
     # Filter closely spaced cycles to keep only the highest amplitude cycle
     cycles_primary = _filter_close_cycles(cycles_primary, signal, tolerance_samps)
     cycles_secondary = _filter_close_cycles(cycles_secondary, signal, tolerance_samps)
-    
+
     # Build quality array
     quality = np.zeros(len(signal), dtype=int)
     for i in range(len(cycles_primary) - 1):
@@ -338,7 +342,7 @@ def _filter_close_cycles(cycles, signal, tolerance_samps):
 
     if len(cycles) == 0:
         return []
-    
+
     filtered = [cycles[0]]
     for i in range(1, len(cycles)):
         if cycles[i] - filtered[-1] > tolerance_samps:
@@ -347,7 +351,7 @@ def _filter_close_cycles(cycles, signal, tolerance_samps):
             # Keep the higher amplitude peak
             if signal[cycles[i]] > signal[filtered[-1]]:
                 filtered[-1] = cycles[i]
-    
+
     return filtered
 
 
@@ -358,7 +362,7 @@ def _signal_cycles(signal, signal_type, cycle_detector, sampling_rate):
     from ..ecg import ecg_peaks
 
     if signal_type=="ecg":
-        
+
         # Detect beats in ECG signal
         signals, info = ecg_peaks(
             signal,
@@ -370,7 +374,7 @@ def _signal_cycles(signal, signal_type, cycle_detector, sampling_rate):
         cycles = info["ECG_R_Peaks"]
 
     elif signal_type=="ppg":
-        
+
         # Detect beats in PPG signal
         signals, info = ppg_peaks(
             signal,
