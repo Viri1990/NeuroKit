@@ -525,7 +525,7 @@ def test_signal_quality():
                 elif method == 'dissimilarity':
                     assert np.isclose(np.mean(quality), 0, atol=1e-3)
                 elif method == 'ici':
-                    assert np.isclose(np.mean(quality), 1, atol=1e-1)
+                    assert np.isclose(np.mean(quality), 1, atol=1e-3)
             elif signal_type == 'ecg':
                 if method == 'templatematch':
                     assert np.isclose(np.mean(quality), 1, atol=1e-1)
