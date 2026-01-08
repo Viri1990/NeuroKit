@@ -50,10 +50,10 @@
             echo "---------------------------------------------------------"
 
             if [ ! -d ".venv" ]; then
-                echo "💡 TIP: Run the following to set up your environment:"
+                echo "TIP: Run the following to set up your environment:"
                 echo "   uv sync --all-groups --all-extras && uv run pre-commit install"
             else
-                echo "🚀 Virtualenv detected. Use 'uv run <cmd>' or 'source .venv/bin/activate'"
+                echo "Virtualenv detected. Use 'uv run <cmd>' or 'source .venv/bin/activate'"
             fi
             echo "---------------------------------------------------------"
             echo ""
