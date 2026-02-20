@@ -399,6 +399,7 @@ def _ecg_quality_zhao2018(
 
         # basSQI
         # UbH
+        basSQI = basSQI * 100
         if basSQI <= 90:
             UbH = 0
         elif basSQI >= 95:
@@ -436,7 +437,7 @@ def _ecg_quality_zhao2018(
         if V < 1.5:
             return "Excellent"
         elif V >= 2.40:
-            return "Unnacceptable"
+            return "Unacceptable"
         else:
             return "Barely acceptable"
 
@@ -498,4 +499,4 @@ def _ecg_quality_basSQI(
     num_power = psd.iloc[0, 0]
     dem_power = psd.iloc[0, 1]
 
-    return (1 - num_power) / dem_power
+    return 1 - (num_power / dem_power)
