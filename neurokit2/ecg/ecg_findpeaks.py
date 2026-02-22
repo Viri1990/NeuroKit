@@ -129,17 +129,6 @@ def _ecg_findpeaks_findmethod(method):
         )
 
 
-def _to_int(f):
-    """Convert f from float to int, if that doesn't require rounding.
-    This is useful when we want to use f to compute integer indices in
-    an array, but f might have been given as a float.  (For example, f
-    might be a sample rate like 1000.0.)
-    """
-    if f == int(f):
-        f = int(f)
-    return f
-
-
 # =============================================================================
 # Probabilistic Methods-Agreement via Convolution (ProMAC)
 # =============================================================================
@@ -484,7 +473,7 @@ def _ecg_findpeaks_khamis(signal, sampling_rate=1000, **kwargs):
         # removed plotting functionality from MATLAB implementation
         Pxx = np.zeros(M)
         a = []
-        fs = _to_int(fs)
+        fs = int(fs)
 
         for i in range(len(smashedECG)):
             x = np.array(smashedECG[i]).flatten()  # Flatten to 1D array
@@ -904,8 +893,7 @@ def _ecg_findpeaks_zong(signal, sampling_rate=1000, cutoff=16, window=0.13, **kw
     clt = np.concatenate([[tmp[0]] * w, tmp])
 
     # Find adaptive threshold
-    window_size = 10 * sampling_rate
-    window_size = _to_int(window_size)
+    window_size = int(10 * sampling_rate)
 
     # Apply fast moving window average with 1D convolution
 
@@ -1820,7 +1808,7 @@ def _ecg_findpeaks_visgraphthreshold(weight, sampling_frequency=1000, **kwargs):
 
     """
     # initialise variables
-    sampling_frequency = _to_int(sampling_frequency)
+    sampling_frequency = int(sampling_frequency)
     N = len(weight)
     min_distance = int(0.25 * sampling_frequency)
     signal_peaks = [-min_distance]
