@@ -3,6 +3,8 @@ import numpy as np
 import pandas as pd
 import scipy.signal
 import scipy.stats
+import pywt
+
 from warnings import warn
 from bisect import insort
 from collections import deque
@@ -1054,14 +1056,7 @@ def _ecg_findpeaks_christov(signal, sampling_rate=1000, **kwargs):
 # Continuous Wavelet Transform (CWT) - Martinez et al. (2004)
 # =============================================================================
 def _ecg_findpeaks_WT(signal, sampling_rate=1000, **kwargs):
-    # Try loading pywt
-    try:
-        import pywt
-    except ImportError as import_error:
-        raise ImportError(
-            "NeuroKit error: ecg_delineator(): the 'PyWavelets' module is required for"
-            " this method to run. Please install it first (`pip install PyWavelets`)."
-        ) from import_error
+
     # first derivative of the Gaissian signal
     scales = np.array([1, 2, 4, 8, 16])
     cwtmatr, __ = pywt.cwt(signal, scales, "gaus1", sampling_period=1.0 / sampling_rate)
@@ -1449,14 +1444,6 @@ def _ecg_findpeaks_kalidas(signal, sampling_rate=1000, **kwargs):
       Bioengineering (BIBE). Uses the Pan and Tompkins thresolding.
 
     """
-    # Try loading pywt
-    try:
-        import pywt
-    except ImportError as import_error:
-        raise ImportError(
-            "NeuroKit error: ecg_findpeaks(): the 'PyWavelets' module is required for"
-            " this method to run. Please install it first (`pip install PyWavelets`)."
-        ) from import_error
 
     signal_length = len(signal)
 

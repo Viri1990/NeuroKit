@@ -14,7 +14,9 @@ with open("README.rst") as readme_file:
 
 with open("NEWS.rst") as history_file:
     history = history_file.read()
-history = history.replace("\n-------------------", "\n^^^^^^^^^^^^^^^^^^^").replace("\n=====", "\n-----")
+history = history.replace("\n-------------------", "\n^^^^^^^^^^^^^^^^^^^").replace(
+    "\n=====", "\n-----"
+)
 
 
 def find_version():
@@ -26,22 +28,31 @@ def find_version():
 
 
 # Dependencies
-requirements = ["requests", "numpy", "pandas", "scipy", "scikit-learn>=1.0.0", "matplotlib>=3.5.0"]
+requirements = [
+    "requests",
+    "numpy",
+    "pandas",
+    "scipy",
+    "scikit-learn>=1.0.0",
+    "matplotlib>=3.5.0",
+    "PyWavelets>=1.4.0",
+]
 
 # Optional Dependencies (only needed / downloaded for testing purposes, for instance to test against some other packages)
 setup_requirements = ["pytest-runner", "numpy"]
 test_requirements = requirements + [
     "pytest",
     "coverage",
+    "setuptools<81",
     "bioread",
     "mne",
     "pyentrp",
     "antropy",
     "EntropyHub",
-    "nolds",
+    "nolds==0.6.2",
     "biosppy==0.6.1",
     "cvxopt",
-    "PyWavelets",
+    "PyWavelets>=1.4.0",
     "EMD-signal",
     "numba>=0.61.0",
     "llvmlite>=0.44.0",
@@ -83,6 +94,6 @@ setup(
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
         "Programming Language :: Python :: 3.12",
-        "Programming Language :: Python :: 3.13"
+        "Programming Language :: Python :: 3.13",
     ],
 )
