@@ -127,7 +127,7 @@ def entropy_phase(signal, delay=1, k=4, show=False, **kwargs):
             plt.plot(np.vstack((np.zeros(k + 1), Xs)), np.vstack((np.zeros(k + 1), Ys)), color="red")
         plt.axis([-limx, limx, -limx, limx])
         plt.gca().set_aspect("equal", "box")
-        (plt.xlabel(r"$X(n +  \tau) - X(n)$"),)
+        plt.xlabel(r"$X(n +  \tau) - X(n)$")
         plt.ylabel(r"$X(n + 2 \tau) - X(n + \tau)$")
         plt.xticks([-limx, 0, limx])
         plt.yticks([-limx, 0, limx])
