@@ -473,6 +473,7 @@ def _ecg_findpeaks_khamis(signal, sampling_rate=1000, **kwargs):
         # removed plotting functionality from MATLAB implementation
         Pxx = np.zeros(M)
         a = []
+        fs = int(fs)
 
         for i in range(len(smashedECG)):
             x = np.array(smashedECG[i]).flatten()  # Flatten to 1D array
@@ -892,7 +893,7 @@ def _ecg_findpeaks_zong(signal, sampling_rate=1000, cutoff=16, window=0.13, **kw
     clt = np.concatenate([[tmp[0]] * w, tmp])
 
     # Find adaptive threshold
-    window_size = 10 * sampling_rate
+    window_size = int(10 * sampling_rate)
 
     # Apply fast moving window average with 1D convolution
 
@@ -1807,6 +1808,7 @@ def _ecg_findpeaks_visgraphthreshold(weight, sampling_frequency=1000, **kwargs):
 
     """
     # initialise variables
+    sampling_frequency = int(sampling_frequency)
     N = len(weight)
     min_distance = int(0.25 * sampling_frequency)
     signal_peaks = [-min_distance]
