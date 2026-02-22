@@ -2,11 +2,10 @@
 from warnings import warn
 
 import numpy as np
-import pandas as pd
 import scipy.signal
 
 from ..misc import NeuroKitWarning, as_vector
-from ..signal import signal_filter
+from ..signal import signal_fillmissing, signal_filter
 
 
 def ecg_clean(ecg_signal, sampling_rate=1000, method="neurokit", **kwargs):
@@ -20,12 +19,13 @@ def ecg_clean(ecg_signal, sampling_rate=1000, method="neurokit", **kwargs):
     * ``'biosppy'``: Method used in the BioSPPy package. A FIR filter ([0.67, 45] Hz; order = 1.5 *
       SR). The 0.67 Hz cutoff value was selected based on the fact that there are no morphological
       features below the heartrate (assuming a minimum heart rate of 40 bpm).
-    * ``'pantompkins1985'``: Method used in Pan & Tompkins (1985). **Please help providing a better
-      description!**
-    * ``'hamilton2002'``: Method used in Hamilton (2002). **Please help providing a better
-      description!**
-    * ``'elgendi2010'``: Method used in Elgendi et al. (2010). **Please help providing a better
-      description!**
+    * ``'pantompkins1985'``: Method used in Pan & Tompkins (1985): band-pass filter between 5 and 15 Hz
+      using a Butterworth filter (with zi provided - initial zero-input response provided to avoid
+      transient artifact at beginning).
+    * ``'hamilton2002'``: Method used in Hamilton (2002): band-pass filter between 8 and 16 Hz
+      using a Butterworth filter (with zi provided).
+    * ``'elgendi2010'``: Method used in Elgendi et al. (2010): band-pass filter between 8 and 20 Hz
+      using a Butterworth filter (with zi provided).
     * ``'engzeemod2012'``: Method used in Engelse & Zeelenberg (1979). **Please help providing a
       better description!**
     * ``'vg'``: Method used in Visibility Graph Based Detection Emrich et al. (2023)
@@ -97,6 +97,7 @@ def ecg_clean(ecg_signal, sampling_rate=1000, method="neurokit", **kwargs):
       Detectors Based on Visibility Graphs. 31st European Signal Processing Conference
       (EUSIPCO), 1090-1094, doi: 10.23919/EUSIPCO58844.2023.10290007
 
+
     """
     ecg_signal = as_vector(ecg_signal)
 
@@ -105,10 +106,10 @@ def ecg_clean(ecg_signal, sampling_rate=1000, method="neurokit", **kwargs):
     if n_missing > 0:
         warn(
             "There are " + str(n_missing) + " missing data points in your signal."
-            " Filling missing values by using the forward filling method.",
+            " Filling missing values using `signal_fillmissing`.",
             category=NeuroKitWarning,
         )
-        ecg_signal = _ecg_clean_missing(ecg_signal)
+        ecg_signal = signal_fillmissing(ecg_signal, method="both")
 
     method = method.lower()  # remove capitalised letters
     if method in ["nk", "nk2", "neurokit", "neurokit2"]:
@@ -159,15 +160,6 @@ def ecg_clean(ecg_signal, sampling_rate=1000, method="neurokit", **kwargs):
 
 
 # =============================================================================
-# Handle missing data
-# =============================================================================
-def _ecg_clean_missing(ecg_signal):
-    ecg_signal = pd.DataFrame.pad(pd.Series(ecg_signal))
-
-    return ecg_signal
-
-
-# =============================================================================
 # NeuroKit
 # =============================================================================
 def _ecg_clean_nk(ecg_signal, sampling_rate=1000, **kwargs):
@@ -180,7 +172,9 @@ def _ecg_clean_nk(ecg_signal, sampling_rate=1000, **kwargs):
         order=5,
     )
 
-    clean = signal_filter(signal=clean, sampling_rate=sampling_rate, method="powerline", **kwargs)
+    clean = signal_filter(
+        signal=clean, sampling_rate=sampling_rate, method="powerline", **kwargs
+    )
     return clean
 
 
@@ -204,7 +198,9 @@ def _ecg_clean_biosppy(ecg_signal, sampling_rate=1000):
 
     #   -> get_filter()
     #     -> _norm_freq()
-    frequency = 2 * np.array(frequency) / sampling_rate  # Normalize frequency to Nyquist Frequency (Fs/2).
+    frequency = (
+        2 * np.array(frequency) / sampling_rate
+    )  # Normalize frequency to Nyquist Frequency (Fs/2).
 
     #     -> get coeffs
     a = np.array([1])
@@ -368,10 +364,14 @@ def _ecg_clean_templateconvolution(ecg_signal, sampling_rate=1000):
     )
 
     # Detect peaks
-    peaks, _ = scipy.signal.find_peaks(filtered, distance=sampling_rate / 3, height=0.5 * np.std(filtered))
+    peaks, _ = scipy.signal.find_peaks(
+        filtered, distance=sampling_rate / 3, height=0.5 * np.std(filtered)
+    )
     peaks = peaks[peaks + 0.6 * sampling_rate < len(ecg_signal)]
 
-    idx = [np.arange(p - int(sampling_rate / 2), p + int(sampling_rate / 2)) for p in peaks]
+    idx = [
+        np.arange(p - int(sampling_rate / 2), p + int(sampling_rate / 2)) for p in peaks
+    ]
     epochs = np.array([filtered[i] for i in idx])
     qrs = np.mean(epochs, axis=0)
 
