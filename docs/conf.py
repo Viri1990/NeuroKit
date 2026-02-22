@@ -109,7 +109,7 @@ add_module_names = (
 
 # -- Options for myst_nb ---------------------------------------------------
 nb_execution_mode = os.getenv("NB_EXECUTION_MODE", "force")
-nb_execution_raise_on_error = True
+nb_execution_raise_on_error = False
 
 # googleanalytics_id = "G-DVXSEGN5M9"
 

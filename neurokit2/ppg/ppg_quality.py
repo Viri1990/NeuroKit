@@ -24,7 +24,7 @@ def ppg_quality(ppg_cleaned, peaks=None, sampling_rate=1000, method="templatemat
       waves prior to calculating the level of dsimilarity, whereas this implementation does not currently
       include this step.
 
-    * The ``"ho2025"` method (Ho et al., 2025) assesses PPG quality on a beat-by-beat basis by predicting
+    * The ``"ho2025"`` method (Ho et al., 2025) assesses PPG quality on a beat-by-beat basis by predicting
       whether each interbeat-interval (IBI) is accurate. To do so, beats are detected using a primary beat detector,
       and each IBI is predicted to be accurate only if a secondary beat detector detects beats
       in the same positions (within a tolerance). In this implementation, all signal samples within an
