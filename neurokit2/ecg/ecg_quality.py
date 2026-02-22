@@ -8,6 +8,7 @@ from ..epochs import epochs_to_df
 from ..misc import NeuroKitWarning
 from ..signal import signal_interpolate
 from ..signal.signal_power import signal_power
+from ..signal.signal_quality import signal_quality
 from ..stats import distance, rescale
 from .ecg_peaks import ecg_peaks
 from .ecg_segment import ecg_segment
@@ -19,6 +20,26 @@ def ecg_quality(
     """**ECG Signal Quality Assessment**
 
     Assess the quality of the ECG Signal using various methods:
+
+    * The ``"templatematch"`` method (loosely based on Orphanidou et al., 2015) computes a continuous
+      index of quality of the ECG signal, by calculating the correlation coefficient between each
+      individual beat morphology and an average (template) beat morphology. This index is therefore
+      relative: 1 corresponds to individual beats that are closest to the beat morphology (i.e.
+      correlate exactly with it) and 0 corresponds to there being no correlation with the average
+      beat morphology. For comparison, the ``"averageQRS"`` method forces the signal the quality to
+      vary between 0 (lowest) and 1 (highest). Therefore, even in a high quality signal, some beats will
+      have low values (e.g. 0), whereas others will have high values (e.g. 1). In contrast, ``"templatematch"``
+      computes a quality metric determined by the average of the correlations between the template beat morphology
+      and each individual beat's morphology. Therefore, it is possible that all beats exhibit high values (e.g. >0.95),
+      indicative of consistent beat morphologies across the signal.
+
+    * The ``"dissimilarity"`` method (loosely based on Sabeti et al., 2019) computes a continuous index
+      of quality of the ECG signal, by calculating the level of dissimilarity between each individual
+      beat shape and an average (template) beat shape (after they are normalised). A value of
+      zero indicates no dissimilarity (i.e. equivalent beat shapes), whereas values above or below
+      indicate increasing dissimilarity. The original method used dynamic time-warping to align the beat
+      shapes prior to calculating the level of dissimilarity, whereas this implementation does not currently
+      include this step.
 
     * The ``"averageQRS"`` method computes a continuous index of quality of the ECG signal, by
       interpolating the distance of each QRS segment from the average QRS segment present in the *
@@ -35,6 +56,14 @@ def ecg_quality(
       to generate the final classification outcome, but because qSQI was dropped, the weights have
       been rearranged to [0.6, 0.2, 0.2] for pSQI, kSQI and basSQI respectively.
 
+    * The ``"ho2025"`` method (Ho et al., 2025) assesses ECG quality on a beat-by-beat basis by predicting
+      whether each RR-interval is accurate. To do so, QRS complexes are detected using a primary QRS detector,
+      and each RR-interval is predicted to be accurate only if a secondary QRS detector detects QRS complexes
+      in the same positions (within a tolerance). In this implementation, all signal samples within an
+      RR-interval are rated as high quality (1) if that RR-interval is predicted to be accurate, or low
+      quality (0) if that RR-interval is predicted to be inaccurate. This approach was derived from the
+      previously proposed bSQI approach.
+
     Parameters
     ----------
     ecg_cleaned : Union[list, np.array, pd.Series]
@@ -45,7 +74,8 @@ def ecg_quality(
     sampling_rate : int
         The sampling frequency of the signal (in Hz, i.e., samples/second).
     method : str
-        The method for computing ECG signal quality, can be ``"averageQRS"`` (default) or ``"zhao2018"``.
+        The method for computing ECG signal quality, can be ``"averageQRS"`` (default), ``"zhao2018"``,
+        ``"templatematch"``, ``"dissimilarity"`` or ``"ho2025"``.
     approach : str
         The data fusion approach as documented in Zhao et al. (2018). Can be ``"simple"``
         or ``"fuzzy"``. The former performs simple heuristic fusion of SQIs and the latter performs
@@ -62,13 +92,19 @@ def ecg_quality(
 
     See Also
     --------
-    ecg_segment, ecg_delineate
+    ecg_segment, ecg_delineate, signal_quality, ecg_clean
 
     References
     ----------
     * Zhao, Z., & Zhang, Y. (2018). "SQI quality evaluation mechanism of single-lead ECG signal
       based on simple heuristic fusion and fuzzy comprehensive evaluation". Frontiers in
       Physiology, 9, 727.
+    * Orphanidou, C. et al. (2015). "Signal-quality indices for the electrocardiogram and photoplethysmogram:
+      derivation and applications to wireless monitoring". IEEE Journal of Biomedical and Health Informatics, 19(3), 832-8.
+    * Sabeti E. et al. (2019). Signal quality measure for pulsatile physiological signals using morphological features:
+      Applications in reliability measure for pulse oximetry. Informatics in Medicine Unlocked, 16, 100222.
+    * Ho, S.Y.S et al. (2025). "Accurate RR-interval extraction from single-lead, telehealth electrocardiogram signals.
+      medRxiv, 2025.03.10.25323655. https://doi.org/10.1101/2025.03.10.25323655
 
     Examples
     --------
@@ -96,11 +132,33 @@ def ecg_quality(
                      method="zhao2018",
                      approach="fuzzy")
 
+    * **Example 3:** Orphanidou et al. (2015) method
+
+    .. ipython:: python
+
+      sampling_rate = 100
+      duration = 20
+      ecg = nk.ecg_simulate(
+          duration=duration, sampling_rate=sampling_rate, heart_rate=70, noise=0.5
+      )
+      ecg_cleaned = nk.ecg_clean(ecg, sampling_rate=sampling_rate)
+      quality = nk.ecg_quality(ecg_cleaned, sampling_rate=sampling_rate, method="templatematch")
+      nk.signal_plot([ecg_cleaned, quality], standardize=True)
+
     """
 
     method = method.lower()  # remove capitalised letters
 
-    # Run peak detection algorithm
+
+    # Sanitise method name
+    if method in ["templatematch", "orphanidou2015"]:
+        method = "templatematch"
+    elif method in ["dissimilarity", "sabeti2019"]:
+        method = "dissimilarity"
+    elif method in ["ho2025", "ho", "ibi", "ici"]:
+        method = "ici"
+
+    # Run quality assessment algorithm
     if method in ["averageqrs"]:
         quality = _ecg_quality_averageQRS(
             ecg_cleaned, rpeaks=rpeaks, sampling_rate=sampling_rate
@@ -118,6 +176,29 @@ def ecg_quality(
 
         quality = _ecg_quality_zhao2018(
             ecg_cleaned, rpeaks=rpeaks, sampling_rate=sampling_rate, mode=approach
+        )
+    elif method in ["templatematch", "dissimilarity"]:
+        # Detect R peaks (if not done already)
+        if rpeaks is None:
+            _, rpeaks = ecg_peaks(ecg_cleaned, sampling_rate=sampling_rate)
+            rpeaks = rpeaks["ECG_R_Peaks"]
+        # Assess quality using template matching
+        quality = signal_quality(
+            ecg_cleaned,
+            cycle_inds=rpeaks,
+            signal_type="ecg",
+            sampling_rate=sampling_rate,
+            method=method,
+        )
+    elif method in ["ici"]:
+        # Assess quality using IBI method (RR-interval accuracy prediction)
+        quality = signal_quality(
+            ecg_cleaned,
+            signal_type="ecg",
+            primary_detector="unsw",
+            secondary_detector="neurokit",
+            sampling_rate=sampling_rate,
+            method="ici",
         )
 
     return quality
@@ -318,6 +399,7 @@ def _ecg_quality_zhao2018(
 
         # basSQI
         # UbH
+        basSQI = basSQI * 100
         if basSQI <= 90:
             UbH = 0
         elif basSQI >= 95:
@@ -355,7 +437,7 @@ def _ecg_quality_zhao2018(
         if V < 1.5:
             return "Excellent"
         elif V >= 2.40:
-            return "Unnacceptable"
+            return "Unacceptable"
         else:
             return "Barely acceptable"
 
@@ -417,4 +499,4 @@ def _ecg_quality_basSQI(
     num_power = psd.iloc[0, 0]
     dem_power = psd.iloc[0, 1]
 
-    return (1 - num_power) / dem_power
+    return 1 - (num_power / dem_power)

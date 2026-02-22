@@ -263,21 +263,25 @@ def _find_artifacts(
     rr = np.ediff1d(peaks, to_begin=0) / sampling_rate
     # For subsequent analysis it is important that the first element has
     # a value in a realistic range (e.g., for median filtering).
-    rr[0] = np.mean(rr[1:])
+    if len(rr) > 1:
+        rr[0] = np.mean(rr[1:])
+    elif len(rr) == 1:
+        rr[0] = 1.0
 
     # Artifact identification #################################################
     ###########################################################################
 
     # Compute dRRs: time series of differences of consecutive periods (dRRs).
     drrs = np.ediff1d(rr, to_begin=0)
-    drrs[0] = np.mean(drrs[1:])
+    if len(drrs) > 1:
+        drrs[0] = np.mean(drrs[1:])
+    elif len(drrs) == 1:
+        drrs[0] = 0.0
+
     # Normalize by threshold.
     th1 = _compute_threshold(drrs, alpha, window_width)
-    # ignore division by 0 warning
-    old_setting = np.seterr(divide="ignore", invalid="ignore")
-    drrs /= th1
-    # return old setting
-    np.seterr(**old_setting)
+    np.divide(drrs, th1, out=drrs, where=th1 != 0)
+    drrs[th1 == 0] = np.nan
 
     # Cast dRRs to subspace s12.
     # Pad drrs with one element.
@@ -304,7 +308,8 @@ def _find_artifacts(
     mrrs[mrrs < 0] = mrrs[mrrs < 0] * 2
     # Normalize by threshold.
     th2 = _compute_threshold(mrrs, alpha, window_width)
-    mrrs /= th2
+    np.divide(mrrs, th2, out=mrrs, where=th2 != 0)
+    mrrs[th2 == 0] = np.nan
 
     # Artifact classification #################################################
     ###########################################################################
@@ -642,12 +647,12 @@ def _remove_small(
         return peaks
     if interval_min is not None:
         interval = signal_period(
-            peaks, sampling_rate=sampling_rate, desired_length=None
+            peaks, sampling_rate=sampling_rate, desired_length=()
         )
         peaks = peaks[interval > interval_min]
     if relative_interval_min is not None:
         interval = signal_period(
-            peaks, sampling_rate=sampling_rate, desired_length=None
+            peaks, sampling_rate=sampling_rate, desired_length=()
         )
         peaks = peaks[standardize(interval, robust=robust) > relative_interval_min]
     return peaks
@@ -664,7 +669,7 @@ def _interpolate_big(
         return peaks
     else:
         interval = signal_period(
-            peaks, sampling_rate=sampling_rate, desired_length=None
+            peaks, sampling_rate=sampling_rate, desired_length=()
         )
         if relative_interval_max is not None:
             outliers = standardize(interval, robust=robust) > relative_interval_max
