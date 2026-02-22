@@ -2,9 +2,7 @@ import warnings
 import numpy as np
 import time
 import pandas as pd
-import scipy
 import matplotlib.pyplot as plt
-import scipy.interpolate
 import urllib.parse
 import requests
 import io
@@ -17,7 +15,8 @@ def read_xdf(
     handle_clock_resets=True,
     upsample_factor=2.0,
     fill_method="ffill",
-    fill_value=0,
+    fill_value=np.nan,
+    fill_max=None,
     fillmissing=None,
     interpolation_method="linear",
     timestamp_reset=True,
@@ -71,14 +70,23 @@ def read_xdf(
         is calculated as: `max(nominal_srate) * upsample_factor`.
         Higher factors reduce aliasing but increase memory usage. Default is 2.0.
     fill_method : {'ffill', 'bfill', None}, optional
-        Method used to fill NaNs arising from resampling (e.g., zero-order hold).
-        Default is 'ffill' (forward fill).
+        Method used to fill NaNs arising from resampling (e.g., at the very start of the
+        recording before the first sample). Default is ``'ffill'`` (forward fill).
+        When ``fill_max`` is set this is automatically overridden to ``None`` so
+        that masked gap regions are not silently forward-filled back in. Explicitly pass
+        a value to override this behaviour.
     fill_value : float or int, optional
-        Value used to fill remaining NaNs (e.g., at the start of the recording before
-        the first sample). Default is 0.
-    fillmissing : float or int, optional
-        DEPRECATED: This argument is deprecated and has no direct equivalent in the new
-        implementation. It previously controlled filling of gaps larger than a threshold.
+        Value used to fill any NaNs that remain after ``fill_method`` is applied.
+        Default is ``np.nan``.
+    fill_max : float or None, optional
+        If provided, any region of the resampled output that falls inside a gap between
+        consecutive original samples larger than this threshold (in seconds) is set back
+        to ``NaN`` after interpolation. This prevents the interpolator from silently
+        bridging large discontinuities (e.g., paused recordings). When this is set,
+        ``fill_method`` is coerced to ``None`` (see above). Default is ``None`` (no
+        masking).
+    fillmissing : float or None, optional
+        Deprecated. Use ``fill_max`` instead.
     interpolation_method : {'linear', 'previous'}, optional
         Method used for interpolating data onto the new timebase.
     timestamp_reset : bool, optional
@@ -125,17 +133,30 @@ def read_xdf(
       import neurokit2 as nk
 
       # data, info = nk.read_xdf("data.xdf")
-      # sampling_rate = info["sampling_rate"]
+      # info["sampling_rates_original"]   # nominal rates per stream
+      # info["sampling_rates_effective"]  # computed effective rates per stream
+      # info["datetime"]                  # recording datetime from header
     """
-    # DEPRECATION WARNING
+    # Handle deprecated fillmissing argument
     if fillmissing is not None:
         warnings.warn(
-            "The 'fillmissing' argument is deprecated and has no direct equivalent in the new optimized implementation. "
-            "This function uses 'scipy.interpolate' which interpolates across all gaps regardless of duration. "
-            "If you need to mask large gaps, please do so on the returned DataFrame.",
-            category=DeprecationWarning,
+            "The 'fillmissing' argument is deprecated. Use 'fill_max' instead.",
+            DeprecationWarning,
             stacklevel=2,
         )
+        if fill_max is None:
+            fill_max = fillmissing
+
+    # When gap masking is active, forward/backward fill would silently erase the
+    # masked NaNs.  Coerce fill_method to None so gaps are preserved.
+    if fill_max is not None and fill_method in ("ffill", "bfill"):
+        warnings.warn(
+            f"fill_max is set: fill_method={fill_method!r} would erase masked gap "
+            "NaNs by filling through them. Coercing fill_method to None. "
+            "Pass fill_method=None explicitly to silence this warning.",
+            stacklevel=2,
+        )
+        fill_method = None
 
     # Load XDF streams
     streams, header = _load_xdf(
@@ -162,16 +183,25 @@ def read_xdf(
         streams, timestamp_reset=timestamp_reset, mode=mode, verbose=verbose
     )
 
+    if not stream_data:
+        raise ValueError(
+            "No valid streams remain after sanitization. "
+            "Check that the file contains streams with timestamps."
+        )
+
     # Resample and synchronize streams
-    resampled_df = _synchronize_streams(
+    resampled_df, target_fs = _synchronize_streams(
         stream_data,
         upsample_factor=upsample_factor,
         fill_method=fill_method,
         fill_value=fill_value,
+        max_gap=fill_max,
         interpolation_method=interpolation_method,
         timestamp_method=timestamp_method,
         mode=mode,
+        verbose=verbose,
     )
+    info["sampling_rate"] = target_fs
 
     # Quality Control Plots
     if isinstance(show, bool) and show is True:
@@ -188,6 +218,7 @@ def read_xdf(
             resampled_df,
             window_start=show_start,
             window_duration=show_duration,
+            verbose=verbose,
         )
     return resampled_df, info
 
@@ -196,10 +227,16 @@ def read_xdf(
 # Quality Control
 # =======================================
 def _visual_control(
-    show, stream_data, resampled_df, window_start=None, window_duration=1.0
+    show,
+    stream_data,
+    resampled_df,
+    window_start=None,
+    window_duration=1.0,
+    verbose=True,
 ):
     # --- Custom Subplot Generation ---
-    print(f"\nGenerating custom plot for {len(show)} specified channels...")
+    if verbose:
+        print(f"\nGenerating custom plot for {len(show)} specified channels...")
 
     if window_start is None:
         window_start = resampled_df.index[int(len(resampled_df) / 2)]
@@ -227,7 +264,6 @@ def _visual_control(
             channel_name not in original_data_map
             or channel_name not in resampled_df.columns
         ):
-            # --- FIX START: Enhanced Debug Message ---
             # Get a sorted list of available columns to help the user
             available_cols = sorted(list(resampled_df.columns))
 
@@ -235,7 +271,6 @@ def _visual_control(
                 f"\n[Visual Control Error] Channel '{channel_name}' not found in data.\n"
                 f"Did you mean one of these?\n{available_cols}\n"
             )
-            # --- FIX END ---
 
             ax.set_title(f"Channel '{channel_name}' - NOT FOUND")
             ax.grid(True)
@@ -337,22 +372,31 @@ def _synchronize_streams(
     stream_data,
     upsample_factor=2.0,
     fill_method="ffill",
-    fill_value=0,
+    fill_value=np.nan,
+    max_gap=None,
     interpolation_method="linear",
     timestamp_method="circular",
     mode="precise",
+    verbose=True,
 ):
     """
     - upsample_factor: Factor to multiply max nominal srate by.
     - fill_method: 'ffill', 'bfill', or None
     - fill_value: Value for remaining NaNs
-    - show (list or None): List of channel names to plot on a single figure.
-                           If None, no plots are generated.
     """
     # --- Compute Target Sampling Rate ---
     target_fs = int(np.max([s["nominal_srate"] for s in stream_data]) * upsample_factor)
 
-    print(f"Target sampling rate: {target_fs} Hz")
+    if target_fs == 0:
+        raise ValueError(
+            "All streams have nominal_srate=0 (irregular/event streams). "
+            "Cannot determine a target sampling rate automatically. "
+            "Consider adding at least one stream with a non-zero nominal_srate, "
+            "or pre-processing the file to assign one."
+        )
+
+    if verbose:
+        print(f"Target sampling rate: {target_fs} Hz")
 
     # --- Run Resampling ---
     start_time = time.time()
@@ -361,22 +405,25 @@ def _synchronize_streams(
         target_fs=target_fs,
         fill_method=fill_method,
         fill_value=fill_value,
+        max_gap=max_gap,
         interpolation_method=interpolation_method,
         timestamp_method=timestamp_method,
         mode=mode,
     )
     duration = time.time() - start_time
 
-    print(f"Resampling complete in {duration:.2f} seconds.")
+    if verbose:
+        print(f"Resampling complete in {duration:.2f} seconds.")
 
-    return resampled_df
+    return resampled_df, target_fs
 
 
 def _resample_streams(
     stream_data,
     target_fs,
     fill_method="ffill",
-    fill_value=0,
+    fill_value=np.nan,
+    max_gap=None,
     interpolation_method="linear",
     timestamp_method="circular",
     mode="precise",
@@ -390,6 +437,8 @@ def _resample_streams(
         target_fs (float): The target sampling rate in Hz.
         fill_method (str): Method for filling NaNs ('ffill', 'bfill', None).
         fill_value (any): Value to fill remaining NaNs (e.g., 0 or np.nan).
+        max_gap (float or None): If set, interpolated regions that span
+            original-data gaps larger than this value are reset to NaN.
 
     Returns:
         pd.DataFrame: A single DataFrame with all streams resampled and merged.
@@ -418,6 +467,7 @@ def _resample_streams(
         cols,
         col_to_idx,
         interpolation_method=interpolation_method,
+        max_gap=max_gap,
         dtype=target_dtype,
     )
 
@@ -569,12 +619,58 @@ def _create_timestamps_circular(stream_data, target_fs):
     return new_timestamps
 
 
+def _mask_large_gaps(original_ts, new_ts, interpolated_data, max_gap):
+    """
+    Set interpolated values back to NaN wherever the new timestamps fall inside
+    a gap between consecutive original samples that exceeds *max_gap*.
+
+    Parameters
+    ----------
+    original_ts : np.ndarray, shape (N,)
+        Sorted original timestamps.
+    new_ts : np.ndarray, shape (M,)
+        Sorted resampled timestamps.
+    interpolated_data : np.ndarray, shape (M, C)
+        Interpolated data array to modify in-place.
+    max_gap : float
+        Gaps strictly larger than this threshold are masked.
+
+    Returns
+    -------
+    interpolated_data : np.ndarray
+        The same array with large-gap regions set to NaN.
+    """
+    gaps = np.diff(original_ts)
+    large_gap_mask = gaps > max_gap
+
+    # Fast path: no large gaps at all
+    if not np.any(large_gap_mask):
+        return interpolated_data
+
+    gap_starts = original_ts[:-1][large_gap_mask]
+    gap_ends = original_ts[1:][large_gap_mask]
+
+    # Vectorised: for each new timestamp, find which gap interval it would fall into
+    # and check whether that interval is a large gap.
+    # np.searchsorted gives the index of the gap whose start is <= new_ts.
+    gap_indices = np.searchsorted(gap_starts, new_ts, side="right") - 1
+    valid = gap_indices >= 0
+    in_large_gap = np.zeros(len(new_ts), dtype=bool)
+    in_large_gap[valid] = (new_ts[valid] > gap_starts[gap_indices[valid]]) & (
+        new_ts[valid] < gap_ends[gap_indices[valid]]
+    )
+    interpolated_data[in_large_gap, :] = np.nan
+
+    return interpolated_data
+
+
 def _interpolate_streams(
     stream_data,
     new_timestamps,
     all_columns,
     col_to_idx,
     interpolation_method="linear",
+    max_gap=None,
     dtype=np.float64,
 ):
     """
@@ -584,6 +680,9 @@ def _interpolate_streams(
     -----------
     mode : str
         "precise" (float64) or "fast" (float32).
+    max_gap : float or None
+        If not None, regions spanning original-data gaps larger than this
+        threshold are reset to NaN after interpolation.
     """
 
     # 1. Create the empty (NaN-filled) data grid with correct dtype
@@ -630,35 +729,52 @@ def _interpolate_streams(
 
         # --- Interpolation ---
         try:
-            # assume_sorted=True improves performance significantly
-            interpolator = scipy.interpolate.interp1d(
-                original_ts,
-                original_data,
-                axis=0,
-                kind=interp_kind,
-                bounds_error=False,
-                fill_value=np.nan,
-                assume_sorted=True,
+            n_cols = original_data.shape[1]
+            interpolated_data_block = np.empty(
+                (len(new_timestamps), n_cols), dtype=dtype
             )
 
-            # Apply the interpolator to the new timestamps
-            interpolated_data_block = interpolator(new_timestamps)
+            if interp_kind == "previous":
+                # Zero-order hold (step) interpolation via searchsorted.
+                # For each new timestamp, take the value of the most recent
+                # original sample that precedes it.
+                idx = np.searchsorted(original_ts, new_timestamps, side="right") - 1
+                out_of_bounds = (idx < 0) | (new_timestamps > original_ts[-1])
+                idx_clipped = np.clip(idx, 0, len(original_ts) - 1)
+                interpolated_data_block[:] = original_data[idx_clipped]
+                interpolated_data_block[out_of_bounds] = np.nan
+            else:
+                # Linear interpolation via np.interp (one column at a time).
+                # left=nan / right=nan matches interp1d bounds_error=False behaviour.
+                for col_i in range(n_cols):
+                    interpolated_data_block[:, col_i] = np.interp(
+                        new_timestamps,
+                        original_ts,
+                        original_data[:, col_i],
+                        left=np.nan,
+                        right=np.nan,
+                    )
 
-            # Ensure the block matches the target dtype
-            if interpolated_data_block.dtype != dtype:
-                interpolated_data_block = interpolated_data_block.astype(dtype)
+            # Mask regions that span large gaps in the original data
+            if max_gap is not None:
+                interpolated_data_block = _mask_large_gaps(
+                    original_ts,
+                    new_timestamps,
+                    interpolated_data_block,
+                    max_gap,
+                )
 
             # Place the interpolated data block into the final grid
             resampled_data[:, col_indices] = interpolated_data_block
 
-        except ValueError as e:
+        except (ValueError, IndexError) as e:
             warnings.warn(f"Interpolation failed for stream '{s['name']}'. Error: {e}")
             continue
 
     return resampled_data
 
 
-def _fill_missing_data(resampled_df, fill_method="ffill", fill_value=0):
+def _fill_missing_data(resampled_df, fill_method="ffill", fill_value=np.nan):
     """
     Fills NaN values in the resampled DataFrame.
 
@@ -675,12 +791,10 @@ def _fill_missing_data(resampled_df, fill_method="ffill", fill_value=0):
         resampled_df = resampled_df.bfill()
 
     # Fill any remaining NaNs (e.g., at the very beginning)
-    if fill_value is not None:
+    if fill_value is not None and not (
+        isinstance(fill_value, float) and np.isnan(fill_value)
+    ):
         resampled_df = resampled_df.fillna(fill_value)
-
-    # After filling, infer the best possible dtypes to silence FutureWarning
-    # copy=False modifies the df in place if possible
-    resampled_df = resampled_df.infer_objects(copy=False)
 
     return resampled_df
 
@@ -840,8 +954,11 @@ def _sanitize_streams(streams, timestamp_reset=True, mode="precise", verbose=Tru
         if nominal_srate > 0 and not (
             nominal_srate - tol <= effective_srate <= nominal_srate + tol
         ):
-            # Just a warning, not an error
-            pass
+            warnings.warn(
+                f"Stream '{name}': effective sampling rate ({effective_srate:.2f} Hz) "
+                f"deviates more than 5% from the nominal rate ({nominal_srate:.2f} Hz). "
+                "This may indicate dropped samples or recording issues."
+            )
 
         stream_data.append(
             {
