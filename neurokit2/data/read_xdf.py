@@ -56,11 +56,10 @@ def read_xdf(
         Path to the .xdf file to load.
     dejitter_timestamps : bool or list, optional
         Controls jitter removal (processing of timestamp irregularities).
-        - If bool: Passed directly to pyxdf (True applies to all streams, False to none).
-        - If list: A list of stream names (str) or indices (int). Dejittering is
-          applied *only* to these specific streams.
-          Note: Using a list triggers a double-load of the file, increasing memory
-          usage and loading time. Default is True.
+        If ``bool``, passed directly to pyxdf (``True`` applies to all streams, ``False`` to none).
+        If ``list``, a list of stream names (str) or indices (int); dejittering is applied *only*
+        to these specific streams. Note: using a list triggers a double-load of the file, increasing
+        memory usage and loading time. Default is ``True``.
     synchronize_clocks : bool, optional
         If True, attempts to synchronize clocks using LSL clock offset data.
         Passed to pyxdf.load_xdf. Default is True.
@@ -83,22 +82,20 @@ def read_xdf(
     interpolation_method : {'linear', 'previous'}, optional
         Method used for interpolating data onto the new timebase.
     timestamp_reset : bool, optional
-        - If True (default): Shifts all timestamps so the recording starts at t=0.0.
-          Useful for analysis relative to the start of the specific file.
-        - If False: Preserves the absolute LSL timestamps (Unix epoch). Useful when
-          synchronizing this data with other files or external clocks.
+        If ``True`` (default), shifts all timestamps so the recording starts at t=0.0,
+        useful for analysis relative to the start of the specific file.
+        If ``False``, preserves the absolute LSL timestamps (Unix epoch), useful when
+        synchronizing this data with other files or external clocks.
     timestamp_method : {'circular', 'anchored'}, optional
         Algorithm used to generate the new time axis.
-        - 'circular': Uses a weighted circular mean to find the optimal phase alignment
-          across all streams. Minimizes global interpolation error.
-        - 'anchored': Aligns the grid strictly to the stream with the highest effective
-          sampling rate.
-        Default is 'circular'.
+        ``'circular'`` uses a weighted circular mean to find the optimal phase alignment
+        across all streams, minimizing global interpolation error.
+        ``'anchored'`` aligns the grid strictly to the stream with the highest effective
+        sampling rate. Default is ``'circular'``.
     mode : {'precise', 'fast'}, optional
-        - 'precise': Uses float64 for all data. Preserves precision but uses more memory.
-        - 'fast': Uses float32. Reduces memory usage by ~50% but may lose precision
-          for very large values.
-        Default is 'precise'.
+        ``'precise'`` uses float64 for all data, preserving precision but using more memory.
+        ``'fast'`` uses float32, reducing memory usage by ~50% but may lose precision
+        for very large values. Default is ``'precise'``.
     verbose : bool, optional
         If True, prints progress, target sampling rates, and categorical mappings to console.
         Default is True.
@@ -130,21 +127,13 @@ def read_xdf(
       # data, info = nk.read_xdf("data.xdf")
       # sampling_rate = info["sampling_rate"]
     """
-    try:
-        import pyxdf
-    except ImportError as e:
-        raise ImportError(
-            "The 'pyxdf' module is required for this function to run. ",
-            "Please install it first (`pip install pyxdf`).",
-        ) from e
-
     # DEPRECATION WARNING
     if fillmissing is not None:
         warnings.warn(
             "The 'fillmissing' argument is deprecated and has no direct equivalent in the new optimized implementation. "
             "This function uses 'scipy.interpolate' which interpolates across all gaps regardless of duration. "
             "If you need to mask large gaps, please do so on the returned DataFrame.",
-            Category=DeprecationWarning,
+            category=DeprecationWarning,
             stacklevel=2,
         )
 
@@ -891,6 +880,14 @@ def _load_xdf(
     """
     Extended wrapper for pyxdf.load_xdf that allows selective stream dejittering.
     """
+
+    try:
+        import pyxdf
+    except ImportError as e:
+        raise ImportError(
+            "The 'pyxdf' module is required for this function to run. "
+            "Please install it first (`pip install pyxdf`)."
+        ) from e
 
     # Check if filename is a URL string
     if isinstance(filename, str) and urllib.parse.urlparse(filename).scheme in (

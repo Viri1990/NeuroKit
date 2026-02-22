@@ -86,12 +86,16 @@ def signal_period(
             category=NeuroKitWarning,
         )
         # insert desired_length if not provided:
-        if desired_length is None:
+        if not isinstance(
+            desired_length, (int, float, np.integer, np.floating)
+        ) and not (isinstance(desired_length, np.ndarray) and desired_length.ndim == 0):
             desired_length = len(peaks)
-        
-        return np.full(desired_length, np.nan)
 
-    if isinstance(desired_length, (int, float)):
+        return np.full(int(desired_length), np.nan)
+
+    if isinstance(desired_length, (int, float, np.integer, np.floating)) or (
+        isinstance(desired_length, np.ndarray) and desired_length.ndim == 0
+    ):
         if desired_length <= peaks[-1]:
             raise ValueError(
                 "NeuroKit error: desired_length must be None or larger than the index of the last peak."
@@ -103,11 +107,15 @@ def signal_period(
     period = np.ediff1d(peaks, to_begin=0) / sampling_rate
     period[0] = np.mean(period[1:])
 
-
     # Interpolate all statistics to desired length.
-    if desired_length is not (): # noqa: F632
+    if isinstance(desired_length, (int, float, np.integer, np.floating)) or (
+        isinstance(desired_length, np.ndarray) and desired_length.ndim == 0
+    ):
         period = signal_interpolate(
-            peaks, period, x_new=np.arange(desired_length), method=interpolation_method
+            peaks,
+            period,
+            x_new=np.arange(int(desired_length)),
+            method=interpolation_method,
         )
 
     return period
