@@ -40,7 +40,7 @@ def expspace(start, stop, num=50, out=int, base=1):
         seq = np.exp2(np.linspace(np.log2(1 + start), np.log2(1 + stop), num, endpoint=True) - 1)  # pylint: disable=E1111
 
     # Round and convert to int
-    if out == int:
+    if out is int:
         seq = np.round(seq).astype(int)
 
     return seq

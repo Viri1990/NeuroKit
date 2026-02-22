@@ -66,8 +66,8 @@ ax1.set_ylabel("Difference")
 # T-values
 ax2.axvline(x=0, linestyle="--", color="black")
 h = None
-for i, c in enumerate(clusters):
-    c = c[0]
+for i, cluster in enumerate(clusters):
+    c = cluster[0]
     if p_vals[i] <= 0.05:
         h = ax2.axvspan(times[c.start], times[c.stop - 1], color="red", alpha=0.5)
     else:

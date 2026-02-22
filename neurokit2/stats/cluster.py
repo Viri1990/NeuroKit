@@ -247,10 +247,10 @@ def _cluster_kmedoids(data, n_clusters=2, max_iterations=1000, random_state=None
     for i in range(max_iterations):
         # Find new medoids
         ids_of_medoids = np.full(n_clusters, -1, dtype=int)
-        for i in range(n_clusters):
-            indices = np.where(segmentation == i)[0]
+        for j in range(n_clusters):
+            indices = np.where(segmentation == j)[0]
             distances = find_distance(data[indices, None, :], data[None, indices, :]).sum(axis=0)
-            ids_of_medoids[i] = indices[np.argmin(distances)]
+            ids_of_medoids[j] = indices[np.argmin(distances)]
 
         # Step 3: Reassign objects to medoids
         new_distances = find_distance(data[:, None, :], data[None, ids_of_medoids, :])

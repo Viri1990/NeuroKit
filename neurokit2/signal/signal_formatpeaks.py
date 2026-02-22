@@ -21,14 +21,14 @@ def signal_formatpeaks(info, desired_length, peak_indices=None, other_indices=No
         # Get values of features
         elif "RecoveryTime" in feature:
             # Sanitize indices and values
-            other_indices, values = _signal_sanitize_indices(other_indices, values)
+            other_indices, other_values = _signal_sanitize_indices(other_indices, values)
             # Append recovery time values to signal
-            signals[feature] = _signal_from_indices(other_indices, desired_length, values)
+            signals[feature] = _signal_from_indices(other_indices, desired_length, other_values)
         else:
             # Sanitize indices and values
-            peak_indices, values = _signal_sanitize_indices(peak_indices, values)
+            peak_indices, peak_values = _signal_sanitize_indices(peak_indices, values)
             # Append peak values to signal
-            signals[feature] = _signal_from_indices(peak_indices, desired_length, values)
+            signals[feature] = _signal_from_indices(peak_indices, desired_length, peak_values)
 
     signals = pd.DataFrame(signals)
     return signals

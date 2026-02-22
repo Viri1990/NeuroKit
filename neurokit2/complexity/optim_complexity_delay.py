@@ -571,8 +571,8 @@ def _embedding_delay_plot(
         segments = np.concatenate([points[:-1], points[1:]], axis=1)
         for i in range(len(x) - 1):
             seg = segments[i]
-            (l,) = ax1.plot(seg[:, 0], seg[:, 1], seg[:, 2], color=colors[i])
-            l.set_solid_capstyle("round")
+            (line,) = ax1.plot(seg[:, 0], seg[:, 1], seg[:, 2], color=colors[i])
+            line.set_solid_capstyle("round")
         ax1.set_zlabel("Signal [i-" + str(2 * tau) + "]")
 
     return fig

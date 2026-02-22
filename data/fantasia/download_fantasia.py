@@ -7,7 +7,7 @@ Steps:
     2. Open it with a zip-opener (WinZip, 7zip).
     3. Extract the folder of the same name (named 'fantasia-database-1.0.0') to the same folder as this script.
     4. Run this script.
-"""
+"""  # noqa: E501
 
 import os
 import pathlib

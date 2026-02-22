@@ -87,9 +87,9 @@ def transition_matrix(sequence, order=1, adjust=True, show=False):
     # Get observed transition matrix
     freqs = np.zeros((n_states,) * (order + 1))
     for idx in zip(*[sequence[i:] for i in range(order + 1)]):
-        idx = tuple([np.argwhere(states == k)[0][0] for k in idx])
-        freqs[idx] += 1
-    freqs
+        idx2 = tuple([np.argwhere(states == k)[0][0] for k in idx])
+        freqs[idx2] += 1
+    # freqs
 
     # Find rows containing zeros (unknown transition)
     idx = freqs.sum(axis=-1) == 0

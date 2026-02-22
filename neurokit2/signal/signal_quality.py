@@ -186,7 +186,7 @@ def signal_quality(
     signal_type = signal_type.lower()
     method = method.lower()
 
-    if method == "ici" and (signal_type != "ppg" and signal_type != "ecg"):
+    if method == "ici" and signal_type not in ["ecg", "ppg"]:
         raise ValueError("`method` 'ici' is only supported for 'ppg' and 'ecg' signal types.")
     if method not in ["ici", "skewness", "kurtosis", "entropy"] and (cycle_inds is None or len(cycle_inds) == 0):
         raise ValueError("`templatematch` and `dissimilarity` require at least one detected peak.")

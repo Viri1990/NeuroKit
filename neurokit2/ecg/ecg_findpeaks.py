@@ -81,48 +81,50 @@ def ecg_findpeaks(ecg_cleaned, sampling_rate=1000, method="neurokit", show=False
 # Returns the peak detector function by name
 def _ecg_findpeaks_findmethod(method):
     if method in ["nk", "nk2", "neurokit", "neurokit2"]:
-        return _ecg_findpeaks_neurokit
+        found_method = _ecg_findpeaks_neurokit
     elif method in ["pantompkins", "pantompkins1985"]:
-        return _ecg_findpeaks_pantompkins
+        found_method = _ecg_findpeaks_pantompkins
     elif method in ["nabian", "nabian2018"]:
-        return _ecg_findpeaks_nabian2018
+        found_method = _ecg_findpeaks_nabian2018
     elif method in ["gamboa2008", "gamboa"]:
-        return _ecg_findpeaks_gamboa
+        found_method = _ecg_findpeaks_gamboa
     elif method in ["ssf", "slopesumfunction"]:
-        return _ecg_findpeaks_ssf
+        found_method = _ecg_findpeaks_ssf
     elif method in ["zong", "zong2003", "wqrs"]:
-        return _ecg_findpeaks_zong
+        found_method = _ecg_findpeaks_zong
     elif method in ["hamilton", "hamilton2002"]:
-        return _ecg_findpeaks_hamilton
+        found_method = _ecg_findpeaks_hamilton
     elif method in ["christov", "christov2004"]:
-        return _ecg_findpeaks_christov
+        found_method = _ecg_findpeaks_christov
     elif method in ["engzee", "engzee2012", "engzeemod", "engzeemod2012"]:
-        return _ecg_findpeaks_engzee
+        found_method = _ecg_findpeaks_engzee
     elif method in ["manikandan", "manikandan2012"]:
-        return _ecg_findpeaks_manikandan
+        found_method = _ecg_findpeaks_manikandan
     elif method in ["elgendi", "elgendi2010"]:
-        return _ecg_findpeaks_elgendi
+        found_method = _ecg_findpeaks_elgendi
     elif method in ["kalidas2017", "swt", "kalidas"]:
-        return _ecg_findpeaks_kalidas
+        found_method = _ecg_findpeaks_kalidas
     elif method in ["khamis2016", "unsw", "khamis"]:
-        return _ecg_findpeaks_khamis
+        found_method = _ecg_findpeaks_khamis
     elif method in ["martinez2004", "martinez"]:
-        return _ecg_findpeaks_WT
+        found_method = _ecg_findpeaks_WT
     elif method in ["rodrigues2020", "rodrigues2021", "rodrigues", "asi"]:
-        return _ecg_findpeaks_rodrigues
+        found_method = _ecg_findpeaks_rodrigues
     elif method in ["vg", "vgraph", "fastnvg", "emrich", "emrich2023"]:
-        return _ecg_findpeaks_visibilitygraph
+        found_method = _ecg_findpeaks_visibilitygraph
     elif method in ["koka2022", "koka"]:
         warn(
             "The 'koka2022' method has been replaced by 'emrich2023'."
             " Please replace method='koka2022' by method='emrich2023'.",
             category=NeuroKitWarning,
         )
-        return _ecg_findpeaks_visibilitygraph
+        found_method = _ecg_findpeaks_visibilitygraph
     elif method in ["promac", "all"]:
         return _ecg_findpeaks_promac
     else:
         raise ValueError(f"NeuroKit error: ecg_findpeaks(): '{method}' not implemented.")
+
+    return found_method
 
 
 # =============================================================================

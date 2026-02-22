@@ -379,8 +379,6 @@ def test_signal_distort():
         signal = nk.signal_simulate(duration=1, frequency=1, sampling_rate=10)
         nk.signal_distort(signal, noise_amplitude=1, noise_frequency=0.1, silent=False)
 
-    signal2 = nk.signal_simulate(duration=10, frequency=0.5, sampling_rate=10)
-
 
 def test_signal_surrogate():
     # Logistic map

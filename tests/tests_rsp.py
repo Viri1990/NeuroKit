@@ -370,7 +370,9 @@ def test_rsp_rvt():
 #         assert rate.shape == (rsp.size,)
 #         assert np.abs(rate.mean()-rsp_rate) < 0.5
 #         # Test with troughs as pd.DataFrame
-#         rate = nk.rsp_rate(rsp, troughs=pd.DataFrame({'RSP_Troughs': info['RSP_Troughs']}), sampling_rate=sampling_rate, method=method)
+#         rate = nk.rsp_rate(
+#           rsp, troughs=pd.DataFrame({"RSP_Troughs": info["RSP_Troughs"]}), sampling_rate=sampling_rate, method=method
+#         )
 #         assert rate.shape == (rsp.size,)
 #         assert np.abs(rate.mean()-rsp_rate) < 0.5
 #         # Test without passing troughs as an argument

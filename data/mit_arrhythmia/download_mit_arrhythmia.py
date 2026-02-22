@@ -39,7 +39,7 @@ def read_file(file, participant):
     """Utility function"""
     # Get signal
     data = pd.DataFrame({"ECG": wfdb.rdsamp(file[:-4])[0][:, 0]})
-    data["Participant"] = "MIT-Arrhythmia_%.2i" % (participant)
+    data["Participant"] = f"MIT-Arrhythmia_{participant:02d}"
     data["Sample"] = range(len(data))
     data["Sampling_Rate"] = 360
     data["Database"] = "MIT-Arrhythmia-x" if "x_mitdb" in file else "MIT-Arrhythmia"
@@ -54,7 +54,7 @@ def read_file(file, participant):
         ]
     )
     anno = pd.DataFrame({"Rpeaks": anno})
-    anno["Participant"] = "MIT-Arrhythmia_%.2i" % (participant)
+    anno["Participant"] = f"MIT-Arrhythmia_{participant:02d}"
     anno["Sampling_Rate"] = 360
     anno["Database"] = "MIT-Arrhythmia-x" if "x_mitdb" in file else "MIT-Arrhythmia"
 

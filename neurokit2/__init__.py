@@ -59,7 +59,7 @@ __bibtex__ = r"""
     year = 2021,
     month = {feb}
 }
-"""
+"""  # noqa: E501
 
 __cite__ = (
     """

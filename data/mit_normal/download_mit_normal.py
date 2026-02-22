@@ -8,7 +8,7 @@ Steps:
 
 Credits:
     https://github.com/berndporr/py-ecg-detectors/blob/master/tester_MITDB.py by Bernd Porr
-"""
+"""  # noqa: E501
 
 import os
 
@@ -32,7 +32,7 @@ for participant, file in enumerate(data_files):
 
     # Get signal
     data = pd.DataFrame({"ECG": wfdb.rdsamp(file[:-4])[0][:, 1]})
-    data["Participant"] = "MIT-Normal_%.2i" % (participant)
+    data["Participant"] = f"MIT-Normal_{participant:02d}"
     data["Sample"] = range(len(data))
     data["Sampling_Rate"] = 128
     data["Database"] = "MIT-Normal"
@@ -41,7 +41,7 @@ for participant, file in enumerate(data_files):
     anno = wfdb.rdann(file[:-4], "atr")
     anno = anno.sample[np.where(np.array(anno.symbol) == "N")[0]]
     anno = pd.DataFrame({"Rpeaks": anno})
-    anno["Participant"] = "MIT-Normal_%.2i" % (participant)
+    anno["Participant"] = f"MIT-Normal_{participant:02d}"
     anno["Sampling_Rate"] = 128
     anno["Database"] = "MIT-Normal"
 

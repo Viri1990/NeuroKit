@@ -189,7 +189,7 @@ def ecg_delineate(
 
     waves_sanitized = {}
     for feature, values in waves.items():
-        waves_sanitized[feature] = [x for x in values if x > 0 or x is np.nan]
+        waves_sanitized[feature] = [x for x in values if x > 0 or np.isnan(x)]
 
     if show is True:
         _ecg_delineate_plot(
@@ -472,7 +472,7 @@ def _dwt_delineate_tp_onsets_offsets(
         # look for onsets
         srch_idx_start = peaks[i] - int(duration_onset * sampling_rate)
         srch_idx_end = peaks[i]
-        if srch_idx_start is np.nan or srch_idx_end is np.nan:
+        if np.isnan(srch_idx_start) or np.isnan(srch_idx_end):
             onsets.append(np.nan)
             continue
         dwt_local = dwtmatr[degree_onset + degree, srch_idx_start:srch_idx_end]
@@ -496,7 +496,7 @@ def _dwt_delineate_tp_onsets_offsets(
         # look for offset
         srch_idx_start = peaks[i]
         srch_idx_end = peaks[i] + int(duration_offset * sampling_rate)
-        if srch_idx_start is np.nan or srch_idx_end is np.nan:
+        if np.isnan(srch_idx_start) or np.isnan(srch_idx_end):
             offsets.append(np.nan)
             continue
         dwt_local = dwtmatr[degree_offset + degree, srch_idx_start:srch_idx_end]
@@ -526,7 +526,7 @@ def _dwt_delineate_qrs_bounds(rpeaks, dwtmatr, ppeaks, tpeaks, qpeaks, sampling_
         # look for onsets
         srch_idx_start = ppeaks[i]
         srch_idx_end = qpeaks[i]
-        if srch_idx_start is np.nan or srch_idx_end is np.nan:
+        if np.isnan(srch_idx_start) or np.isnan(srch_idx_end):
             onsets.append(np.nan)
             continue
         dwt_local = dwtmatr[2 + degree, srch_idx_start:srch_idx_end]
@@ -553,7 +553,7 @@ def _dwt_delineate_qrs_bounds(rpeaks, dwtmatr, ppeaks, tpeaks, qpeaks, sampling_
         # look for offsets
         srch_idx_start = rpeaks[i]
         srch_idx_end = tpeaks[i]
-        if srch_idx_start is np.nan or srch_idx_end is np.nan:
+        if np.isnan(srch_idx_start) or np.isnan(srch_idx_end):
             offsets.append(np.nan)
             continue
         dwt_local = dwtmatr[2 + degree, srch_idx_start:srch_idx_end]
@@ -738,13 +738,13 @@ def _prominence_ecg_delineator(ecg, rpeaks=None, sampling_rate=1000, **kwargs):
             )
 
         # append waves for current beat / complex
-        for key in waves:
+        for key, wave in waves.items():
             if key == "ECG_R_Peaks":
-                waves[key].append(int(rpeaks[i]))
+                wave.append(int(rpeaks[i]))
             elif key in current_wave:
-                waves[key].append(int(current_wave[key] + left))
+                wave.append(int(current_wave[key] + left))
             else:
-                waves[key].append(np.nan)
+                wave.append(np.nan)
 
     return waves
 

@@ -6,7 +6,7 @@ Steps:
     1. Download zipped data base from https://physionet.org/content/ludb/1.0.1/
     2. Unzip the folder so that you have a `lobachevsky-university-electrocardiography-database-1.0.1/` folder'
     3. Run this script.
-"""
+"""  # noqa: E501
 
 import numpy as np
 import pandas as pd
@@ -25,7 +25,7 @@ for participant in range(200):
     # Get signal
     data = pd.DataFrame(data, columns=info["sig_name"])
     data = data[["i"]].rename(columns={"i": "ECG"})
-    data["Participant"] = "LUDB_%.2i" % (participant + 1)
+    data["Participant"] = f"LUDB_{participant + 1:02d}"
     data["Sample"] = range(len(data))
     data["Sampling_Rate"] = info["fs"]
     data["Database"] = "LUDB"
@@ -34,7 +34,7 @@ for participant in range(200):
     anno = wfdb.rdann("./lobachevsky-university-electrocardiography-database-1.0.1/data/" + filename, "i")
     anno = anno.sample[np.where(np.array(anno.symbol) == "N")[0]]
     anno = pd.DataFrame({"Rpeaks": anno})
-    anno["Participant"] = "LUDB_%.2i" % (participant + 1)
+    anno["Participant"] = f"LUDB_{participant + 1:02d}"
     anno["Sampling_Rate"] = info["fs"]
     anno["Database"] = "LUDB"
 

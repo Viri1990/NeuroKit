@@ -8,7 +8,7 @@ Steps:
 
 Credits:
     https://github.com/berndporr/py-ecg-detectors/blob/master/tester_MITDB.py by Bernd Porr
-"""
+"""  # noqa: E501
 
 import os
 

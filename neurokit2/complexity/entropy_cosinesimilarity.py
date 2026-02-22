@@ -109,7 +109,7 @@ def entropy_cosinesimilarity(signal=None, delay=1, dimension=3, tolerance="sd"):
     Bm = np.sum(np.triu(Pm, 1) / (N * (N - 1) / 2))
 
     # 7. Cosine similarity entropy
-    if Bm == 1 or Bm == 0:
+    if Bm in [0, 1]:
         cosien = 0
     else:
         cosien = -(Bm * np.log(Bm)) - ((1 - Bm) * np.log(1 - Bm))

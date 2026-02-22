@@ -41,7 +41,8 @@ def test_eeg_add_channel():
     # test if the column of channel is added
     assert len(df2.columns) == 378
 
-    # test if the NaN is appended properly to the added channel to account for difference in distance between two signals + difference in length
+    # test if the NaN is appended properly to the added channel to account for difference
+    # in distance between two signals + difference in length
     sync_index_raw = 0
     sync_index_channel = 100
     for i in df2["Added_Channel"].tail(abs(sync_index_channel - sync_index_raw) + (len(raw) - len(ecg2))):

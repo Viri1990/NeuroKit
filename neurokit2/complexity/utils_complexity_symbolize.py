@@ -225,7 +225,7 @@ def complexity_symbolize(signal, method="mean", c=3, random_state=None, show=Fal
             symbolic = (np.abs(np.diff(signal)) > np.nanstd(signal, ddof=1)).astype(int)
             if show is True:
                 where = np.where(symbolic)[0]
-                plt.plot(signal, zorder=1 == 1)
+                plt.plot(signal, zorder=1)
                 plt.scatter(where, signal[where], color="orange", label="Inversion", zorder=2)
                 plt.title("Method D")
 

@@ -30,7 +30,7 @@ fetcher = pooch.create(
 for sub in files.keys():
     try:
         _ = fetcher.fetch(sub)
-    except:
+    except Exception:
         pass
 
 print("Finished downloading!")

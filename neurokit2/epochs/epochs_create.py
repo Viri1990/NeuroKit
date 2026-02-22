@@ -211,16 +211,16 @@ def epochs_create(
         epochs[label] = epoch
 
     # Sanitize dtype of individual columns
-    for i in epochs:
-        for colname, column in epochs[i].select_dtypes(include=["object"]).items():
+    for i, epoch_df in epochs.items():
+        for colname, column in epoch_df.select_dtypes(include=["object"]).items():
             # Check whether columns are indices or label/condition
             values = column.unique().tolist()
-            zero_or_one = False not in [x in [0, 1] for x in values]
+            zero_or_one = all(x in [0, 1] for x in values)
 
             if zero_or_one:
                 # Force to int64
-                epochs[i][colname] = epochs[i][colname].astype("int64")
+                epoch_df[colname] = epoch_df[colname].astype("int64")
             else:
-                epochs[i][colname] = epochs[i][colname].astype("string")
+                epoch_df[colname] = epoch_df[colname].astype("string")
 
     return epochs
