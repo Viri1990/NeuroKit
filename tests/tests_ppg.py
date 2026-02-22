@@ -247,29 +247,40 @@ def test_ppg_findpeaks_all_methods():
     )
     ppg_cleaned = nk.ppg_clean(ppg, sampling_rate=sampling_rate, method="elgendi")
 
-    methods = [
-        "elgendi", "bishop", "charlton", "charlton2024"
-    ]
+    methods = ["elgendi", "bishop", "charlton", "charlton2024"]
     for method in methods:
-        # Use cleaned signal for elgendi, bishop; raw for charlton methods
-        info = nk.ppg_findpeaks(ppg_cleaned, sampling_rate=sampling_rate, method=method, show=False)
+        info = nk.ppg_findpeaks(
+            ppg_cleaned, sampling_rate=sampling_rate, method=method, show=False
+        )
         assert isinstance(info, dict), f"Failed due to incorrect {method} output type"
         assert "PPG_Peaks" in info, f"Failed as {method} output missing 'PPG_Peaks'"
         peaks = info["PPG_Peaks"]
-        assert isinstance(peaks, np.ndarray), f"Failed as {method} peaks of incorrect type"
-        assert np.issubdtype(peaks.dtype, np.integer), f"Failed as {method} peaks of incorrect dtype"
-        assert np.all((peaks >= 0) & (peaks < len(ppg_cleaned))), f"{method} peaks indices out of range"
-        # For charlton methods, also check onsets
+        assert isinstance(
+            peaks, np.ndarray
+        ), f"Failed as {method} peaks of incorrect type"
+        assert np.issubdtype(
+            peaks.dtype, np.integer
+        ), f"Failed as {method} peaks of incorrect dtype"
+        assert np.all(
+            (peaks >= 0) & (peaks < len(ppg_cleaned))
+        ), f"{method} peaks indices out of range"
         if method in ["charlton", "charlton2024"]:
             assert "PPG_Onsets" in info, f"Failed as {method} missing 'PPG_Onsets'"
             onsets = info["PPG_Onsets"]
-            assert isinstance(onsets, np.ndarray), f"Failed as {method} onsets of incorrect type"
-            assert np.issubdtype(onsets.dtype, np.integer), f"Failed as {method} onsets of incorrect dtype"
-            assert np.all((onsets >= 0) & (onsets < len(ppg_cleaned))), f"Failed as {method} onsets indices out of range"
+            assert isinstance(
+                onsets, np.ndarray
+            ), f"Failed as {method} onsets of incorrect type"
+            assert np.issubdtype(
+                onsets.dtype, np.integer
+            ), f"Failed as {method} onsets of incorrect dtype"
+            assert np.all(
+                (onsets >= 0) & (onsets < len(ppg_cleaned))
+            ), f"Failed as {method} onsets indices out of range"
 
-    # Edge case: invalid method
     with pytest.raises(ValueError):
-        nk.ppg_findpeaks(ppg_cleaned, sampling_rate=sampling_rate, method="invalidmethod")
+        nk.ppg_findpeaks(
+            ppg_cleaned, sampling_rate=sampling_rate, method="invalidmethod"
+        )
 
 
 def test_ppg_peaks_all_methods():
@@ -291,31 +302,106 @@ def test_ppg_peaks_all_methods():
     )
     ppg_cleaned = nk.ppg_clean(ppg, sampling_rate=sampling_rate, method="elgendi")
 
-    methods = [
-        "elgendi", "bishop", "charlton", "charlton2024"
-    ]
+    methods = ["elgendi", "bishop", "charlton", "charlton2024"]
     for method in methods:
-        # Use cleaned signal for elgendi, bishop; raw for charlton methods
-        signals, info = nk.ppg_peaks(ppg_cleaned, sampling_rate=sampling_rate, method=method, show=False)
-        # signals should be a DataFrame of same length as input
+        signals, info = nk.ppg_peaks(
+            ppg_cleaned, sampling_rate=sampling_rate, method=method, show=False
+        )
         assert hasattr(signals, "shape"), f"Failed as {method} signals has no shape"
-        assert signals.shape[0] == len(ppg_cleaned), f"Failed as {method} signals length mismatch"
-        assert "PPG_Peaks" in signals.columns, f"Failed as {method} signals missing 'PPG_Peaks'"
-        # info should be a dict with PPG_Peaks
+        assert signals.shape[0] == len(
+            ppg_cleaned
+        ), f"Failed as {method} signals length mismatch"
+        assert (
+            "PPG_Peaks" in signals.columns
+        ), f"Failed as {method} signals missing 'PPG_Peaks'"
         assert isinstance(info, dict), f"Failed as {method} info is not a dict"
         assert "PPG_Peaks" in info, f"Failed as {method} info missing 'PPG_Peaks'"
         peaks = info["PPG_Peaks"]
-        assert isinstance(peaks, np.ndarray), f"Failed as {method} peaks of incorrect type"
-        assert np.issubdtype(peaks.dtype, np.integer), f"Failed as {method} peaks of incorrect dtype"
-        assert np.all((peaks >= 0) & (peaks < len(ppg_cleaned))), f"{method} peaks indices out of range"
-        # For charlton methods, also check onsets
+        assert isinstance(
+            peaks, np.ndarray
+        ), f"Failed as {method} peaks of incorrect type"
+        assert np.issubdtype(
+            peaks.dtype, np.integer
+        ), f"Failed as {method} peaks of incorrect dtype"
+        assert np.all(
+            (peaks >= 0) & (peaks < len(ppg_cleaned))
+        ), f"{method} peaks indices out of range"
         if method in ["charlton", "charlton2024"]:
             assert "PPG_Onsets" in info, f"Failed as {method} missing 'PPG_Onsets'"
             onsets = info["PPG_Onsets"]
-            assert isinstance(onsets, np.ndarray), f"Failed as {method} onsets of incorrect type"
-            assert np.issubdtype(onsets.dtype, np.integer), f"Failed as {method} onsets of incorrect dtype"
-            assert np.all((onsets >= 0) & (onsets < len(ppg_cleaned))), f"Failed as {method} onsets indices out of range"
+            assert isinstance(
+                onsets, np.ndarray
+            ), f"Failed as {method} onsets of incorrect type"
+            assert np.issubdtype(
+                onsets.dtype, np.integer
+            ), f"Failed as {method} onsets of incorrect dtype"
+            assert np.all(
+                (onsets >= 0) & (onsets < len(ppg_cleaned))
+            ), f"Failed as {method} onsets indices out of range"
 
-    # Edge case: invalid method
     with pytest.raises(ValueError):
         nk.ppg_peaks(ppg_cleaned, sampling_rate=sampling_rate, method="invalidmethod")
+
+
+def test_ppg_quality_all_methods():
+    sampling_rate = 100
+    duration = 120
+    ppg_raw = nk.ppg_simulate(
+        duration=duration, sampling_rate=sampling_rate, heart_rate=70
+    )
+    ppg_raw = ppg_raw + np.linspace(10, 30, len(ppg_raw))  # to obtain DC offset
+    ppg_cleaned = nk.ppg_clean(ppg_raw, sampling_rate=sampling_rate)
+    methods = [
+        "templatematch",
+        "dissimilarity",
+        "ici",
+        "skewness",
+        "kurtosis",
+        "entropy",
+        "perfusion",
+        "relative_power",
+    ]
+    for method in methods:
+        kwargs = {}
+        if method in ["perfusion", "relative_power"]:
+            kwargs["ppg_raw"] = ppg_raw
+        quality = nk.ppg_quality(
+            ppg_cleaned, sampling_rate=sampling_rate, method=method, **kwargs
+        )
+        assert isinstance(
+            quality, (np.ndarray, list)
+        ), f"Failed due to incorrect {method} output type"
+        assert len(quality) == len(
+            ppg_cleaned
+        ), f"Failed due to incorrect {method} output length"
+        assert np.all(
+            np.isfinite(quality)
+        ), f"Failed due to {method} output containing non-finite values"
+        if method == "templatematch":
+            assert np.all(
+                (quality >= 0) & (quality <= 1)
+            ), "Failed as templatematch output should be between 0 and 1"
+        if method == "ici":
+            assert set(np.unique(quality)).issubset(
+                {0, 1}
+            ), "Failed as ICI output should be 0 or 1"
+        if method == "perfusion":
+            assert np.all(
+                (quality >= 0)
+            ), "Failed as perfusion output should be between 0 and 100"
+
+
+def test_ppg_quality_window_error():
+    sampling_rate = 100
+    duration = 2  # Shorter than default window for relative_power
+    ppg_raw = nk.ppg_simulate(
+        duration=duration, sampling_rate=sampling_rate, heart_rate=70
+    )
+    ppg_cleaned = nk.ppg_clean(ppg_raw, sampling_rate=sampling_rate)
+    with pytest.raises(ValueError):
+        nk.ppg_quality(
+            ppg_cleaned,
+            sampling_rate=sampling_rate,
+            method="relative_power",
+            ppg_raw=ppg_raw,
+        )
