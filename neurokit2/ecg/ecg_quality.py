@@ -235,9 +235,7 @@ def _ecg_quality_averageQRS(ecg_cleaned, rpeaks=None, sampling_rate=1000):
 # =============================================================================
 # Zhao (2018) method
 # =============================================================================
-def _ecg_quality_zhao2018(
-    ecg_cleaned, rpeaks=None, sampling_rate=1000, window=1024, kurtosis_method="fisher", mode="simple", **kwargs
-):
+def _ecg_quality_zhao2018(ecg_cleaned, rpeaks=None, sampling_rate=1000, window=1024, mode="simple", **kwargs):
     """Return ECG quality classification of based on Zhao et al. (2018),
     based on three indices: pSQI, kSQI, basSQI (qSQI not included here).
 
@@ -259,8 +257,6 @@ def _ecg_quality_zhao2018(
         The sampling frequency of the signal (in Hz, i.e., samples/second).
     window : int
         Length of each window in seconds. See `signal_psd()`.
-    kurtosis_method : str
-        Compute kurtosis (kSQI) based on "fisher" (default) or "pearson" definition.
     mode : str
         The data fusion approach as documented in Zhao et al. (2018). Can be "simple" (default)
         or "fuzzy". The former performs simple heuristic fusion of SQIs and the latter performs
@@ -280,7 +276,7 @@ def _ecg_quality_zhao2018(
         rpeaks = rpeaks["ECG_R_Peaks"]
 
     # Compute indexes
-    kSQI = _ecg_quality_kSQI(ecg_cleaned, method=kurtosis_method)
+    kSQI = _ecg_quality_kSQI(ecg_cleaned)
     pSQI = _ecg_quality_pSQI(ecg_cleaned, sampling_rate=sampling_rate, window=window, **kwargs)
     basSQI = _ecg_quality_basSQI(ecg_cleaned, sampling_rate=sampling_rate, window=window, **kwargs)
 
@@ -418,13 +414,9 @@ def _ecg_quality_zhao2018(
             return "Barely acceptable"
 
 
-def _ecg_quality_kSQI(ecg_cleaned, method="fisher"):
-    """Return the kurtosis of the signal, with Fisher's or Pearson's method."""
-
-    if method == "fisher":
-        return scipy.stats.kurtosis(ecg_cleaned, fisher=True)
-    elif method == "pearson":
-        return scipy.stats.kurtosis(ecg_cleaned, fisher=False)
+def _ecg_quality_kSQI(ecg_cleaned):
+    """Return the kurtosis of the signal, using Pearson's method."""
+    return scipy.stats.kurtosis(ecg_cleaned, fisher=False)
 
 
 def _ecg_quality_pSQI(ecg_cleaned, sampling_rate=1000, window=1024, num_spectrum=[5, 15], dem_spectrum=[5, 40], **kwargs):
