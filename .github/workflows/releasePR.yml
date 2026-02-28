@@ -1,79 +1,52 @@
 name: 📦 Release & Publish
 
 on:
-  push:
-    branches: [master]
-    tags: ['v*']
-  workflow_dispatch:
+    push:
+        branches: [master]
+        tags: ["v*"]
+    workflow_dispatch:
 
 permissions:
-  contents: write
-  id-token: write
-  attestations: write
+    contents: write
+    id-token: write
+    attestations: write
 
 jobs:
-  # --- STAGE 1: Update Visuals ---
-  readme:
-    name: 📊 Update README Figures
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-    steps:
-      - uses: actions/checkout@v4
+    # --- STAGE 1: Test Release ---
+    publish-test:
+        name: 🧪 Publish to TestPyPI
+        if: startsWith(github.ref, 'refs/tags/v')
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - uses: astral-sh/setup-uv@v5
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v5
-        with:
-          enable-cache: true
+            - name: Build
+              run: uv build
 
-      - name: Install dependencies
-        run: |
-          uv sync --extra full --group dev
+            - name: Publish to TestPyPI
+              uses: pypa/gh-action-pypi-publish@release/v1
+              with:
+                  repository-url: https://test.pypi.org/legacy/
+                  verbose: true
 
-      - name: Run README_examples
-        run: uv run python docs/readme/README_examples.py
+    # --- STAGE 2: Production Release ---
+    publish-prod:
+        name: 🚀 Publish to PyPI
+        needs: publish-test
+        if: startsWith(github.ref, 'refs/tags/v')
+        runs-on: ubuntu-latest
+        environment:
+            name: pypi
+            url: https://pypi.org/p/neurokit2
+        steps:
+            - uses: actions/checkout@v4
+            - uses: astral-sh/setup-uv@v5
 
-      - name: Commit figures
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: "chore: update README figures [skip ci]"
-          file_pattern: "*.png"
+            - name: Build
+              run: uv build
 
-  # --- STAGE 2: Test Release ---
-  publish-test:
-    name: 🧪 Publish to TestPyPI
-    needs: readme
-    if: always() && startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
-
-      - name: Build
-        run: uv build
-
-      - name: Publish to TestPyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          repository-url: https://test.pypi.org/legacy/
-          verbose: true
-
-  # --- STAGE 3: Production Release ---
-  publish-prod:
-    name: 🚀 Publish to PyPI
-    needs: publish-test
-    if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-latest
-    environment:
-      name: pypi
-      url: https://pypi.org/p/neurokit2
-    steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
-
-      - name: Build
-        run: uv build
-
-      - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          verbose: true
+            - name: Publish to PyPI
+              uses: pypa/gh-action-pypi-publish@release/v1
+              with:
+                  verbose: true
