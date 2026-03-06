@@ -763,7 +763,7 @@ def _calc_prominence(peaks, sig, Rpeak=None, minima=False):
     _sig = -sig if minima else sig
     w[peaks] = scipy.signal.peak_prominences(_sig, peaks)[0]
     # optional: set rpeak prominence to zero to emphasize other peaks
-    if Rpeak is not None:
+    if Rpeak is not None and Rpeak < len(w):
         w[Rpeak] = 0
     return w
 
