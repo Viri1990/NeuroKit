@@ -763,7 +763,7 @@ def _calc_prominence(peaks, sig, Rpeak=None, minima=False):
     _sig = -sig if minima else sig
     w[peaks] = scipy.signal.peak_prominences(_sig, peaks)[0]
     # optional: set rpeak prominence to zero to emphasize other peaks
-    if Rpeak is not None and Rpeak < len(w):
+    if Rpeak is not None and 0 <= Rpeak < len(w):
         w[Rpeak] = 0
     return w
 
@@ -781,9 +781,9 @@ def _prominence_find_s_wave(sig, weight_minima, current_wave, max_qrs_interval):
     if "ECG_Q_Peaks" not in current_wave:
         return
     s_bound = current_wave["ECG_Q_Peaks"] + max_qrs_interval
-    s_wave = np.argmax(weight_minima[current_wave["ECG_R_Peaks"] : s_bound] > 0) + current_wave["ECG_R_Peaks"]
     if len(weight_minima[current_wave["ECG_R_Peaks"] : s_bound] > 0) == 0:
         return
+    s_wave = np.argmax(weight_minima[current_wave["ECG_R_Peaks"] : s_bound] > 0) + current_wave["ECG_R_Peaks"]
     current_wave["ECG_S_Peaks"] = (
         np.argmin(sig[current_wave["ECG_R_Peaks"] : s_bound]) + current_wave["ECG_R_Peaks"]
         if s_wave == current_wave["ECG_R_Peaks"]
